@@ -16,6 +16,7 @@ import PickYourSide from '@/components/PickYourSide'
 import ShareCard from '@/components/ShareCard'
 import LiveStatsTicker from '@/components/LiveStatsTicker'
 import CityPopup from '@/components/CityPopup'
+import MatchBrowser from '@/components/MatchBrowser'
 import type { CityData } from '@/types'
 
 const GlobeComponent = dynamicImport(() => import('@/components/GlobeComponent'), {
@@ -148,9 +149,25 @@ export default function GlobePage() {
   const [showShareCard, setShowShareCard] = useState(false)
   const [selectedCity, setSelectedCity] = useState<CityData|null>(null)
   const [momentWave, setMomentWave] = useState(false)
+  const [snapshots, setSnapshots] = useState<Record<string, { totalCount: number; pulse: { fire: number; ecstatic: number; nervous: number; crushed: number; moment: number } }>>({})
   const toastTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
   const momentTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
   const auth = useAuth()
+
+  // Pre-fetch snapshots for all events (for match browser fan counts)
+  useEffect(() => {
+    const featured = events.filter(e => e.isFeatured).slice(0, 8)
+    featured.forEach(ev => {
+      fetch(`/api/snapshot/${ev.id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.totalCount !== undefined) {
+            setSnapshots(prev => ({ ...prev, [ev.id]: { totalCount: data.totalCount, pulse: data.pulse } }))
+          }
+        })
+        .catch(() => {})
+    })
+  }, [events])
 
   useEffect(() => {
     const done = localStorage.getItem('fg_onboarded')
@@ -335,6 +352,9 @@ export default function GlobePage() {
           )}
         </div>
       </div>
+
+      {/* Match browser — slide up panel */}
+      <MatchBrowser events={events} activeEventId={effectiveEventId} onSelect={handleSwitchEvent} snapshots={snapshots} />
 
       {/* Pulse bar */}
       <PulseBar pulse={pulse} matchLabel={activeEvent.label} sessionId={auth.user?.id ?? ''} matchId={effectiveEventId} sport={sport} accessToken={auth.accessToken} />
