@@ -19,7 +19,9 @@ export function useSnapshot(eventId: string | null) {
     try {
       const res = await fetch(`/api/snapshot/${id}`, {
         signal: abortRef.current.signal,
-        cache: 'no-store',
+        // Allow browser to cache for 60s — reduces redundant requests
+        cache: 'default',
+        headers: { 'Cache-Control': 'max-age=60' },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data: Snapshot = await res.json()

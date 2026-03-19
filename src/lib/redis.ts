@@ -52,7 +52,9 @@ export async function getEventSnapshot(eid: string) {
 }
 
 export async function getCachedSnapshot(eid: string): Promise<string|null> { return redis.get<string>(keys.snap(eid)) }
-export async function setCachedSnapshot(eid: string, data: string): Promise<void> { await redis.setex(keys.snap(eid), 90, data) }
+export async function setCachedSnapshot(eid: string, data: string): Promise<void> {
+  await redis.setex(keys.snap(eid), 300, data)
+}
 
 export async function checkRateLimit(id: string, ep: string, limit: number, windowSecs: number): Promise<boolean> {
   const key = keys.rate(id, ep)

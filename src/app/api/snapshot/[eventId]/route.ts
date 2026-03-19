@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getEventSnapshot, getCachedSnapshot } from '@/lib/redis'
+import { getCachedSnapshot, setCachedSnapshot } from '@/lib/redis'
 import { getFallbackEvents, getEventSeedCities } from '@/lib/events'
 import { createServiceClient } from '@/lib/supabase-server'
 import type { Snapshot, CityData } from '@/types'
@@ -96,31 +96,31 @@ export async function GET(
     })
   }
 
-  const { total, homeTotal, awayTotal, cities, pulse } = await getEventSnapshot(eventId)
-
-  const mergedCities: CityData[] = seedCities.map(seed => ({
-    ...seed,
-    count: seed.count + (Number(cities[seed.city] ?? 0)),
-  })).sort((a, b) => b.count - a.count)
-
-  const totalCount = mergedCities.reduce((s, c) => s + c.count, 0)
-    || (total + seedCities.reduce((s, c) => s + c.count, 0))
-  const countryCount = Array.from(new Set(mergedCities.map(c => c.country))).length
+  // Build snapshot from seed data only (no raw Redis reads)
+  // Raw Redis reads only happen in the cron job which writes the cache
   const seedTotal = seedCities.reduce((s, c) => s + c.count, 0)
+  const countryCount = Array.from(new Set(seedCities.map(c => c.country))).length
 
   const snapshot: Snapshot = {
-    eventId, sportId: event.sportId, totalCount,
-    homeCount: homeTotal + Math.floor(seedTotal * 0.48),
-    awayCount: awayTotal + Math.floor(seedTotal * 0.47),
-    cities: mergedCities, pulse, countryCount,
+    eventId, sportId: event.sportId,
+    totalCount: seedTotal,
+    homeCount: Math.floor(seedTotal * 0.48),
+    awayCount: Math.floor(seedTotal * 0.47),
+    cities: seedCities,
+    pulse: { fire: Math.floor(seedTotal * 0.35), ecstatic: Math.floor(seedTotal * 0.28), nervous: Math.floor(seedTotal * 0.24), crushed: Math.floor(seedTotal * 0.10), moment: Math.floor(seedTotal * 0.03) },
+    countryCount,
     updatedAt: new Date().toISOString(),
   }
 
-  return new NextResponse(JSON.stringify(snapshot), {
+  const body = JSON.stringify(snapshot)
+  // Cache for 5 minutes — no need to refresh static seed data frequently
+  await setCachedSnapshot(eventId, body)
+
+  return new NextResponse(body, {
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, s-maxage=3, stale-while-revalidate=10',
-      'X-Cache': 'MISS',
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      'X-Cache': 'SEED',
     },
   })
 }
