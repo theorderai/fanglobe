@@ -1,0 +1,173 @@
+'use client'
+import { useState, useRef, useEffect } from 'react'
+import { useCountdown } from '@/hooks/useCountdown'
+import { SPORT_LIST } from '@/types'
+import type { FanGlobeEvent } from '@/types'
+
+interface Props {
+  events: FanGlobeEvent[]
+  activeEventId: string
+  onSelect: (eventId: string) => void
+}
+
+function formatKickoff(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const diff = d.getTime() - now.getTime()
+  if (diff < 0) return 'LIVE'
+  if (diff < 86400000) {
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function EventPill({ event, active, onSelect }: { event: FanGlobeEvent; active: boolean; onSelect: () => void }) {
+  const countdown = useCountdown(event.kickoffAt)
+  const isLive = countdown === 'LIVE'
+  const sport = event.sport
+  const accent = sport?.arcColor ? sport.arcColor + '1)' : '#39ff76'
+
+  return (
+    <button onClick={onSelect} style={{
+      display: 'flex', alignItems: 'center', gap: 5,
+      padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
+      whiteSpace: 'nowrap', border: 'none', flexShrink: 0,
+      fontFamily: "'Syne', sans-serif", fontSize: 11, fontWeight: 600,
+      transition: 'all 0.18s ease',
+      background: active ? accent : 'transparent',
+      color: active ? '#000' : 'rgba(255,255,255,0.5)',
+    }}>
+      {event.isRivalry && !active && (
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ff6b35', flexShrink: 0, boxShadow: '0 0 4px #ff6b35' }} />
+      )}
+      <span style={{ fontSize: 12 }}>{event.homeFlag}</span>
+      <span>{event.homeTeam.split(' ').slice(-1)[0]}</span>
+      <span style={{ opacity: 0.45, fontSize: 9 }}>vs</span>
+      <span>{event.awayTeam.split(' ').slice(-1)[0]}</span>
+      <span style={{ fontSize: 12 }}>{event.awayFlag}</span>
+      <span style={{
+        fontSize: 9, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
+        background: active ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.09)',
+        padding: '1px 5px', borderRadius: 100,
+        color: !active && isLive ? '#39ff76' : 'inherit',
+      }}>
+        {isLive ? '● LIVE' : formatKickoff(event.kickoffAt)}
+      </span>
+    </button>
+  )
+}
+
+export default function SportEventSwitcher({ events, activeEventId, onSelect }: Props) {
+  const activeEvent = events.find(e => e.id === activeEventId) ?? events[0]
+  const [activeSport, setActiveSport] = useState(activeEvent?.sportId ?? 'soccer')
+  const [showAll, setShowAll] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const availableSports = SPORT_LIST.filter(s => events.some(e => e.sportId === s.id))
+  const sportEvents = events.filter(e => e.sportId === activeSport)
+  const visibleEvents = showAll ? sportEvents : sportEvents.slice(0, 8)
+  const hasMore = sportEvents.length > 8
+
+  const handleSportClick = (sportId: string) => {
+    setActiveSport(sportId)
+    setShowAll(false)
+    const first = events.find(e => e.sportId === sportId)
+    if (first) onSelect(first.id)
+  }
+
+  // Scroll active event into view
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const active = scrollRef.current.querySelector('[data-active="true"]') as HTMLElement
+    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [activeEventId])
+
+  const sport = SPORT_LIST.find(s => s.id === activeSport)
+  const accent = sport?.arcColor ? sport.arcColor + '1)' : '#39ff76'
+
+  return (
+    <div style={{
+      position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+      maxWidth: '92vw',
+    }}>
+      {/* Sport tabs */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 2,
+        background: 'rgba(4,5,8,0.88)', border: '1px solid rgba(255,255,255,0.09)',
+        borderRadius: 100, padding: 4,
+        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 16px 40px rgba(0,0,0,0.6)',
+      }}>
+        {availableSports.map(s => {
+          const isActive = s.id === activeSport
+          const a = s.arcColor + '1)'
+          const count = events.filter(e => e.sportId === s.id).length
+          return (
+            <button key={s.id} onClick={() => handleSportClick(s.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 12px', borderRadius: 100, cursor: 'pointer',
+              border: 'none', fontFamily: "'Syne', sans-serif", fontSize: 11, fontWeight: 700,
+              transition: 'all 0.18s ease',
+              background: isActive ? a : 'transparent',
+              color: isActive ? '#000' : 'rgba(255,255,255,0.45)',
+            }}>
+              <span style={{ fontSize: 14 }}>{s.emoji}</span>
+              {s.name}
+              <span style={{
+                fontSize: 9, background: isActive ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.09)',
+                borderRadius: 100, padding: '1px 5px',
+                color: isActive ? '#000' : 'rgba(255,255,255,0.35)',
+              }}>{count}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Event pills */}
+      <div style={{
+        background: 'rgba(4,5,8,0.85)', border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 100, padding: '3px 4px',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        maxWidth: '90vw', position: 'relative',
+      }}>
+        <div ref={scrollRef} style={{
+          display: 'flex', alignItems: 'center', gap: 1,
+          overflowX: 'auto', scrollbarWidth: 'none', maxWidth: '85vw',
+        }}>
+          {visibleEvents.map(ev => (
+            <div key={ev.id} data-active={ev.id === activeEventId}>
+              <EventPill
+                event={ev}
+                active={ev.id === activeEventId}
+                onSelect={() => onSelect(ev.id)}
+              />
+            </div>
+          ))}
+          {hasMore && !showAll && (
+            <button onClick={() => setShowAll(true)} style={{
+              padding: '5px 10px', borderRadius: 100, border: 'none',
+              background: 'transparent', color: accent,
+              fontSize: 10, fontWeight: 700, cursor: 'pointer',
+              fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}>
+              +{sportEvents.length - 8} more
+            </button>
+          )}
+          {showAll && hasMore && (
+            <button onClick={() => setShowAll(false)} style={{
+              padding: '5px 10px', borderRadius: 100, border: 'none',
+              background: 'transparent', color: 'rgba(255,255,255,0.3)',
+              fontSize: 10, fontWeight: 700, cursor: 'pointer',
+              fontFamily: "'JetBrains Mono', monospace', whiteSpace: 'nowrap'",
+              flexShrink: 0,
+            }}>
+              ← less
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
