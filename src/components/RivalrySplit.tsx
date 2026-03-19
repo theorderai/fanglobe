@@ -22,8 +22,8 @@ export default function RivalrySplit({ event, snapshot }: Props) {
 
   return (
     <div style={{
-      position: 'fixed', top: 90, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 20, width: 'min(380px, 88vw)',
+      position: 'fixed', top: 'var(--split-top, 90px)', left: '50%', transform: 'translateX(-50%)',
+      zIndex: 18, width: 'min(340px, 82vw)',
       background: 'rgba(6,7,10,0.82)',
       border: '1px solid rgba(255,255,255,0.09)',
       borderRadius: 16, padding: '12px 16px',

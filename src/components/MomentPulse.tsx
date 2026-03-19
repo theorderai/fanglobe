@@ -61,8 +61,9 @@ export default function MomentPulse({ event, accessToken }: Props) {
       <button
         onClick={triggerMoment}
         disabled={cooldown}
+        className="moment-btn"
         style={{
-          width: 64, height: 64, borderRadius: '50%',
+          width: 54, height: 54, borderRadius: '50%',
           background: reacting ? accentColor : 'rgba(6,7,10,0.85)',
           border: `2px solid ${accentColor}`,
           cursor: cooldown ? 'default' : 'pointer',

@@ -299,12 +299,12 @@ export default function GlobePage() {
       <CompactCheerFeed cheers={cheers} sessionId={auth.user?.id ?? ''} matchId={effectiveEventId} accentColor={accentColor} />
 
       {/* Moment pulse — wired to trigger wave */}
-      <div onClick={triggerMomentWave} style={{ position:'fixed',bottom:232,right:20,zIndex:20 }}>
+      <div style={{ position:'fixed',bottom:220,right:14,zIndex:20 }} onClick={triggerMomentWave}>
         <MomentPulse event={activeEvent} accessToken={auth.accessToken} />
       </div>
 
       {/* BOTTOM CENTER: Counter + CTA */}
-      <div style={{ position:'fixed',bottom:220,left:'50%',transform:'translateX(-50%)',textAlign:'center',zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:6 }}>
+      <div className="bottom-cta" style={{ position:'fixed',bottom:220,left:'50%',transform:'translateX(-50%)',textAlign:'center',zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:6 }}>
         <div style={{ display:'flex',gap:14 }}>
           <div style={{ fontSize:10,color:'rgba(255,255,255,0.28)',fontFamily:"'JetBrains Mono',monospace",display:'flex',alignItems:'center',gap:4 }}>
             <div style={{ width:4,height:4,borderRadius:'50%',background:accentColor,animation:'pip 2s infinite' }} />{countryCount} countries

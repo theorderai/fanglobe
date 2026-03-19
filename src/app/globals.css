@@ -65,3 +65,38 @@ html, body {
 @media (max-width: 768px) {
   .moment-btn { width: 52px !important; height: 52px !important; bottom: 190px !important; right: 12px !important; }
 }
+
+/* ── Mobile layout fixes ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Fan split — push below the 3-row switcher */
+  :root { --split-top: 126px; }
+
+  /* Countdown badge — right side, below split */
+  :root { --badge-top: 126px; }
+
+  /* Moment pulse — smaller, tucked right */
+  .moment-btn {
+    width: 46px !important;
+    height: 46px !important;
+  }
+
+  /* Hide passport link text on mobile */
+  .passport-link span { display: none; }
+
+  /* Pulse bar vibes — 2x2 grid on mobile */
+  .vibe-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    width: 96vw !important;
+  }
+
+  /* Bottom CTA moves up a bit more */
+  .bottom-cta { bottom: 200px !important; }
+}
+
+@media (max-width: 480px) {
+  /* Even tighter on small phones */
+  :root { --split-top: 132px; --badge-top: 132px; }
+  .fan-counter { font-size: 36px !important; letter-spacing: -1px !important; }
+}
