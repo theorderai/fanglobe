@@ -1,14 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/snapshot",
+      "path": "/api/cron",
       "schedule": "* * * * *"
     }
-  ],
-  "regions": ["iad1", "sfo1", "lhr1", "sin1"],
-  "functions": {
-    "src/app/api/checkin/route.ts": { "maxDuration": 10 },
-    "src/app/api/vote/route.ts": { "maxDuration": 10 },
-    "src/app/api/cheer/submit/route.ts": { "maxDuration": 15 }
-  }
+  ]
 }
