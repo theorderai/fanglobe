@@ -1,5 +1,6 @@
 'use client'
-import dynamic from 'next/dynamic'
+export const dynamic = 'force-dynamic'
+import dynamicImport from 'next/dynamic'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useEvents } from '@/hooks/useEvents'
 import { useSnapshot } from '@/hooks/useSnapshot'
@@ -17,7 +18,7 @@ import LiveStatsTicker from '@/components/LiveStatsTicker'
 import CityPopup from '@/components/CityPopup'
 import type { CityData } from '@/types'
 
-const GlobeComponent = dynamic(() => import('@/components/GlobeComponent'), {
+const GlobeComponent = dynamicImport(() => import('@/components/GlobeComponent'), {
   ssr: false,
   loading: () => (
     <div style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#000' }}>
@@ -34,7 +35,7 @@ function KickoffBadge({ kickoffAt, venue, homeTeam, awayTeam, homeFlag, awayFlag
   const countdown = useCountdown(kickoffAt)
   const isLive = countdown === 'LIVE'
   return (
-    <div style={{ position:'fixed',top:76,right:20,zIndex:20,background:'rgba(4,5,8,0.92)',border:`1px solid ${isLive ? accentColor.replace('1)','0.4)') : 'rgba(255,255,255,0.08)'}`,borderRadius:14,padding:'10px 14px',textAlign:'right',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',minWidth:160 }}>
+    <div style={{ position:'fixed',top:'var(--badge-top, 76px)',right:12,zIndex:20,background:'rgba(4,5,8,0.92)',border:`1px solid ${isLive ? accentColor.replace('1)','0.4)') : 'rgba(255,255,255,0.08)'}`,borderRadius:14,padding:'8px 12px',textAlign:'right',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',maxWidth:'42vw' }}>
       <div style={{ fontSize:9,color:'rgba(255,255,255,0.28)',marginBottom:5,fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px',textTransform:'uppercase' }}>{venue}</div>
       {/* Team vs team */}
       <div style={{ display:'flex',alignItems:'center',justifyContent:'flex-end',gap:6,marginBottom:6 }}>
@@ -55,7 +56,7 @@ function CompactLeaderboard({ cities, total, countryCount, accentColor }:
   const fmt = (n: number) => n >= 1000 ? `${(n/1000).toFixed(0)}k` : String(n)
   const RANK_COLORS = ['#ffd166','rgba(200,200,200,0.55)','rgba(180,130,80,0.65)']
   return (
-    <div style={{ position:'fixed',right:16,top:'50%',transform:'translateY(-50%)',background:'rgba(4,5,8,0.88)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,padding:'12px 13px',width:172,zIndex:20,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)' }}>
+    <div className="desktop-only" style={{ position:'fixed',right:16,top:'50%',transform:'translateY(-50%)',background:'rgba(4,5,8,0.88)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,padding:'12px 13px',width:172,zIndex:20,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)' }}>
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
         <span style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.3)',letterSpacing:'2px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace" }}>Top cities</span>
         <span style={{ fontSize:9,background:`${accentColor.replace('1)','0.12)')}`,color:accentColor,borderRadius:100,padding:'2px 6px',fontFamily:"'JetBrains Mono',monospace",fontWeight:600,border:`1px solid ${accentColor.replace('1)','0.2)')}`}}>{total > 0 ? total.toLocaleString() : '—'}</span>
@@ -97,7 +98,7 @@ function CompactCheerFeed({ cheers, sessionId, matchId, accentColor }:
   const VIBE_EMOJI: Record<string,string> = { fire:'🔥',ecstatic:'🎉',nervous:'😰',crushed:'💀',moment:'⚡' }
 
   return (
-    <div style={{ position:'fixed',left:16,top:'50%',transform:'translateY(-50%)',width:180,zIndex:20 }}>
+    <div className="desktop-only" style={{ position:'fixed',left:16,top:'50%',transform:'translateY(-50%)',width:180,zIndex:20 }}>
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:7 }}>
         <span style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.28)',letterSpacing:'2px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace" }}>Live cheers</span>
         <button onClick={() => setShowInput(v=>!v)} style={{ fontSize:9,fontWeight:700,color:accentColor,background:accentColor.replace('1)','0.1)'),border:`1px solid ${accentColor.replace('1)','0.2)')}`,borderRadius:100,padding:'2px 7px',cursor:'pointer',fontFamily:"'JetBrains Mono',monospace" }}>
@@ -314,7 +315,7 @@ export default function GlobePage() {
         </div>
 
         {/* Big counter with team color when checked in */}
-        <div style={{ fontSize:56,fontWeight:800,letterSpacing:-3,lineHeight:1,fontVariantNumeric:'tabular-nums',fontFamily:"'JetBrains Mono',monospace",textShadow:`0 0 50px ${teamAccent.includes('rgba') ? teamAccent.replace('1)','0.3)') : teamAccent+'55'}, 0 0 100px ${teamAccent.includes('rgba') ? teamAccent.replace('1)','0.1)') : teamAccent+'22'}`,color:'#fff',transition:'text-shadow 0.5s' }}>
+        <div className="fan-counter" style={{ fontWeight:800,letterSpacing:-3,lineHeight:1,fontVariantNumeric:'tabular-nums',fontFamily:"'JetBrains Mono',monospace",textShadow:`0 0 50px ${teamAccent.includes('rgba') ? teamAccent.replace('1)','0.3)') : teamAccent+'55'}, 0 0 100px ${teamAccent.includes('rgba') ? teamAccent.replace('1)','0.1)') : teamAccent+'22'}`,color:'#fff',transition:'text-shadow 0.5s' }}>
           {total.toLocaleString()}
         </div>
         <div style={{ fontSize:10,color:'rgba(255,255,255,0.25)',letterSpacing:'3px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace" }}>

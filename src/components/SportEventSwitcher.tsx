@@ -132,9 +132,9 @@ export default function SportEventSwitcher({ events, activeEventId, onSelect }: 
 
   return (
     <div style={{
-      position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-      maxWidth: '94vw',
+      position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+      maxWidth: '98vw', width: '98vw',
     }}>
       {/* Row 1: Sport tabs */}
       <div style={{
@@ -150,15 +150,15 @@ export default function SportEventSwitcher({ events, activeEventId, onSelect }: 
           const count = events.filter(e => e.sportId === s.id).length
           return (
             <button key={s.id} onClick={() => handleSportClick(s.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '5px 11px', borderRadius: 100, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 9px', borderRadius: 100, cursor: 'pointer',
               border: 'none', fontFamily: "'Syne', sans-serif", fontSize: 11, fontWeight: 700,
               transition: 'all 0.18s ease',
               background: isActive ? a : 'transparent',
               color: isActive ? '#000' : 'rgba(255,255,255,0.45)',
             }}>
               <span style={{ fontSize: 13 }}>{s.emoji}</span>
-              {s.name}
+              <span className="sport-name">{s.name}</span>
               <span style={{
                 fontSize: 9, background: isActive ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.08)',
                 borderRadius: 100, padding: '1px 5px',
