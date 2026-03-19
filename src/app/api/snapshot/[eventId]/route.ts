@@ -41,9 +41,9 @@ export async function GET(
         .single()
 
       if (data) {
-        // Map DB row to FanGlobeEvent shape
         event = {
           id: data.id,
+          slug: data.slug,
           sportId: data.sport_id,
           homeTeam: data.home_team,
           awayTeam: data.away_team,
@@ -64,13 +64,18 @@ export async function GET(
           isRivalry: data.is_rivalry ?? false,
           isFeatured: data.is_featured ?? false,
         }
-        // Try to find matching fallback seed data by label similarity
-        const matchingFallback = allFallback.find(f =>
-          f.sportId === data.sport_id &&
-          (f.homeTeam === data.home_team || f.awayTeam === data.away_team)
-        )
-        if (matchingFallback) {
-          seedCities = getEventSeedCities(matchingFallback.id)
+        // Look up seed cities by slug first, then by team name match
+        if (data.slug) {
+          seedCities = getEventSeedCities(data.slug)
+        }
+        if (seedCities.length === 0) {
+          const matchingFallback = allFallback.find(f =>
+            f.sportId === data.sport_id &&
+            (f.homeTeam === data.home_team || f.awayTeam === data.away_team)
+          )
+          if (matchingFallback) {
+            seedCities = getEventSeedCities(matchingFallback.id)
+          }
         }
       }
     } catch (e) {

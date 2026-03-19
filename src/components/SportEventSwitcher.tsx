@@ -5,9 +5,12 @@ import { SPORT_LIST } from '@/types'
 import type { FanGlobeEvent } from '@/types'
 
 interface Props {
-  events: FanGlobeEvent[]
+  events: FanGlobeEvent[]           // all loaded events (for sport tab counts)
+  activeEvents: FanGlobeEvent[]     // events for currently active sport
+  activeSport: string               // currently active sport id
   activeEventId: string
   onSelect: (eventId: string) => void
+  onSwitchSport: (sportId: string) => void
 }
 
 // Group events into competitions
@@ -18,19 +21,21 @@ function groupByCompetition(events: FanGlobeEvent[]): { label: string; emoji: st
     let key = 'other'
     let label = 'Other'
     let emoji = e.sport?.emoji ?? '🏆'
+    // Use slug for grouping — falls back to id for static events
+    const ref = e.slug ?? e.id
 
     if (e.sportId === 'soccer') {
-      if (e.id.startsWith('wc-') || e.id.includes('world-cup') || e.id === 'wc-final') {
+      if (ref.startsWith('wc26-') || ref.startsWith('wc-')) {
         key = 'worldcup'; label = 'World Cup 2026'; emoji = '🏆'
-      } else if (e.id.startsWith('ucl-') || e.homeTeam === 'Champions League') {
-        key = 'ucl'; label = "Champions League"; emoji = '⭐'
-      } else if (e.id === 'wimbledon-2026') {
+      } else if (ref.startsWith('ucl26-') || ref.startsWith('ucl-')) {
+        key = 'ucl'; label = 'Champions League'; emoji = '⭐'
+      } else if (ref.includes('wimbledon')) {
         key = 'wimbledon'; label = 'Wimbledon 2026'; emoji = '🎾'
       } else {
         key = 'soccer-other'; label = 'Football'; emoji = '⚽'
       }
     } else if (e.sportId === 'cricket') {
-      if (e.id.startsWith('ipl-')) {
+      if (ref.startsWith('ipl26-') || ref.startsWith('ipl-')) {
         key = 'ipl'; label = 'IPL 2026'; emoji = '🏏'
       } else {
         key = 'cricket-intl'; label = 'International Cricket'; emoji = '🏏'
@@ -47,7 +52,6 @@ function groupByCompetition(events: FanGlobeEvent[]): { label: string; emoji: st
     groups[key].events.push(e)
   }
 
-  // Sort groups by first event date
   return Object.values(groups).sort((a, b) =>
     new Date(a.events[0].kickoffAt).getTime() - new Date(b.events[0].kickoffAt).getTime()
   )
@@ -101,22 +105,19 @@ function EventBtn({ event, active, onSelect }: { event: FanGlobeEvent; active: b
   )
 }
 
-export default function SportEventSwitcher({ events, activeEventId, onSelect }: Props) {
-  const activeEvent = events.find(e => e.id === activeEventId) ?? events[0]
-  const [activeSport, setActiveSport] = useState(activeEvent?.sportId ?? 'soccer')
+export default function SportEventSwitcher({ events, activeEvents, activeSport, activeEventId, onSelect, onSwitchSport }: Props) {
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
 
-  const availableSports = SPORT_LIST.filter(s => events.some(e => e.sportId === s.id))
-  const sportEvents = events.filter(e => e.sportId === activeSport)
-  const groups = groupByCompetition(sportEvents)
+  const availableSports = SPORT_LIST.filter(s => events.some(e => e.sportId === s.id) || s.id === activeSport)
+  const groups = groupByCompetition(activeEvents)
 
   // Auto-select first group when sport changes
   const currentGroup = activeGroup ?? groups[0]?.label ?? null
   const groupEvents = groups.find(g => g.label === currentGroup)?.events ?? groups[0]?.events ?? []
 
   const handleSportClick = (sportId: string) => {
-    setActiveSport(sportId)
     setActiveGroup(null)
+    onSwitchSport(sportId)
     const first = events.find(e => e.sportId === sportId)
     if (first) onSelect(first.id)
   }
@@ -129,6 +130,8 @@ export default function SportEventSwitcher({ events, activeEventId, onSelect }: 
 
   const sport = SPORT_LIST.find(s => s.id === activeSport)
   const accent = sport?.arcColor ? sport.arcColor + '1)' : '#39ff76'
+  // Reset group when sport changes externally
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   return (
     <div style={{

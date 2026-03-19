@@ -5,7 +5,7 @@ export interface Sport {
 }
 export interface SportVibe { key: string; emoji: string; label: string }
 export interface FanGlobeEvent {
-  id: string; sportId: string; sport?: Sport
+  id: string; slug?: string; sportId: string; sport?: Sport
   homeTeam: string; awayTeam: string
   homeFlag: string; awayFlag: string
   homeColor?: string; awayColor?: string

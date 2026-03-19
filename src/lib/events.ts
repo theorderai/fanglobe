@@ -320,7 +320,21 @@ function defaultSeed(event: FanGlobeEvent): CityData[] {
 }
 
 export function getEventSeedCities(eventId: string): CityData[] {
-  const explicit = EVENT_SEED_CITIES[eventId]
+  // Slug aliases for new DB events → existing seed data
+  const slugAliases: Record<string, string> = {
+    'wc26-c1-bra-mar': 'wc-brazil-morocco',
+    'wc26-d1-usa-par': 'wc-usa-paraguay',
+    'wc26-d2-usa-aus': 'wc-d2-usa-australia',
+    'wc26-f1-ned-jpn': 'wc-f1-netherlands-japan',
+    'wc26-h4-uru-esp': 'wc-h3-uruguay-spain',
+    'wc26-j1-arg-alg': 'wc-j1-argentina-algeria',
+    'wc26-l1-eng-cro': 'wc-l1-england-croatia',
+    'wc26-final':      'wc-final',
+    'ind-pak-2026':    'cricket-india-pakistan',
+    'ucl26-final':     'ucl-final-2026',
+  }
+  const resolved = slugAliases[eventId] ?? eventId
+  const explicit = EVENT_SEED_CITIES[resolved]
   if (explicit) return explicit
   const event = WC2026_EVENTS.find(e => e.id === eventId)
   if (event) return defaultSeed(event)

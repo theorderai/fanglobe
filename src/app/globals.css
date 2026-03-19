@@ -100,3 +100,9 @@ html, body {
   :root { --split-top: 132px; --badge-top: 132px; }
   .fan-counter { font-size: 36px !important; letter-spacing: -1px !important; }
 }
+
+/* Mobile only — show on mobile, hide on desktop */
+.mobile-only { display: none; }
+@media (max-width: 768px) {
+  .mobile-only { display: flex !important; }
+}

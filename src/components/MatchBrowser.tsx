@@ -13,6 +13,7 @@ interface Props {
   activeEventId: string
   onSelect: (id: string) => void
   snapshots: Record<string, MatchSnapshot>
+  mobileInline?: boolean
 }
 
 // ── Date strip helpers ──────────────────────────────────────────────────────
@@ -72,7 +73,8 @@ function MatchCard({ event, active, snap, onSelect }: {
 }) {
   const countdown = useCountdown(event.kickoffAt)
   const isLive = countdown === 'LIVE'
-  const sport = event.sport
+  const { SPORTS } = require('@/types')
+  const sport = event.sport ?? SPORTS[event.sportId]
   const accent = sport?.arcColor ? sport.arcColor + '1)' : 'rgba(57,255,118,1)'
   const vibe = vibeBadge(snap?.pulse)
   const fans = snap?.totalCount ?? 0
@@ -149,12 +151,13 @@ function MatchCard({ event, active, snap, onSelect }: {
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
-export default function MatchBrowser({ events, activeEventId, onSelect, snapshots }: Props) {
+export default function MatchBrowser({ events, activeEventId, onSelect, snapshots, mobileInline }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeSport, setActiveSport] = useState('soccer')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
-  const activeEvent = events.find(e => e.id === activeEventId)
+  const activeEvent = events.find(e => e.id === activeEventId) ?? events[0]
+  if (!activeEvent) return null
 
   // Sport filter
   const sportEvents = useMemo(() => events.filter(e => e.sportId === activeSport), [events, activeSport])
@@ -188,25 +191,36 @@ export default function MatchBrowser({ events, activeEventId, onSelect, snapshot
   return (
     <>
       {/* Trigger tab — sits above pulse bar */}
-      <button onClick={() => setIsOpen(true)} style={{
-        position: 'fixed', bottom: 148, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 25, background: 'rgba(4,5,8,0.9)',
-        border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: 100, padding: '7px 18px',
-        display: 'flex', alignItems: 'center', gap: 8,
-        cursor: 'pointer', backdropFilter: 'blur(16px)',
+      <button onClick={() => setIsOpen(true)} style={mobileInline ? {
+        background: 'transparent', border: 'none',
+        borderRadius: 100, padding: '4px 8px',
+        display: 'flex', alignItems: 'center', gap: 5,
+        cursor: 'pointer', flexShrink: 0,
         fontFamily: "'Syne', sans-serif",
+      } : {
+        position: 'fixed',
+        bottom: 260, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 25,
+        background: 'rgba(4,5,8,0.92)',
+        border: '1px solid rgba(255,255,255,0.18)',
+        borderRadius: 100,
+        padding: '8px 18px',
+        display: 'flex', alignItems: 'center', gap: 8,
+        cursor: 'pointer',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        fontFamily: "'Syne', sans-serif",
+        boxShadow: '0 2px 20px rgba(0,0,0,0.6)',
+        whiteSpace: 'nowrap',
       }}>
+        <span style={{ fontSize: mobileInline ? 14 : 13 }}>📅</span>
+        {!mobileInline && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>Match Schedule</span>}
         {liveCount > 0 && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#dc2626', fontWeight: 700 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#dc2626', display: 'inline-block', boxShadow: '0 0 4px #dc2626' }} />
-            {liveCount} live
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#dc2626', fontWeight: 700, background: 'rgba(220,38,38,0.12)', padding: '2px 6px', borderRadius: 100 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
+            {liveCount}
           </span>
         )}
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-          {activeEvent ? `${activeEvent.homeFlag} ${activeEvent.homeTeam.split(' ').slice(-1)[0]} vs ${activeEvent.awayTeam.split(' ').slice(-1)[0]} ${activeEvent.awayFlag}` : 'Browse matches'}
-        </span>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>↑</span>
+        {!mobileInline && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>↑</span>}
       </button>
 
       {/* Slide-up panel */}

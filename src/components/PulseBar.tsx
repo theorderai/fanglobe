@@ -65,7 +65,7 @@ export default function PulseBar({ pulse, matchLabel, sessionId, matchId, sport,
   }, [casting, userVibe, matchId, accessToken])
 
   return (
-    <div style={{ position:'fixed',bottom:0,left:0,right:0,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:24,gap:10 }}>
+    <div style={{ position:'fixed',bottom:0,left:0,right:0,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:'max(24px, env(safe-area-inset-bottom, 24px))',gap:10 }} className="pulse-wrap">
       <div style={{ display:'flex',gap:8 }}>
         {vibes.map(v => {
           const voted = userVibe === v.key

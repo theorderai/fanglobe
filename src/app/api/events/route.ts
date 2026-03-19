@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events: FanGlobeEvent[] = data.map((row: any) => ({
-      id: row.id, sportId: row.sport_id, sport: SPORTS[row.sport_id],
+      id: row.id, slug: row.slug ?? row.id, sportId: row.sport_id, sport: SPORTS[row.sport_id],
       homeTeam: row.home_team, awayTeam: row.away_team,
       homeFlag: row.home_flag ?? '', awayFlag: row.away_flag ?? '',
       homeColor: row.home_color, awayColor: row.away_color,
