@@ -1,78 +1,87 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import type { Snapshot } from '@/types'
-
-const POLL_MS = 60000      // poll every 60 seconds — CDN cache is 60s anyway
-const LIVE_POLL_MS = 30000 // 30s when live — matches browser cache-control
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export function useSnapshot(eventId: string | null) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loading, setLoading] = useState(true)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const etagRef = useRef<string | null>(null)
-
-  const fetchSnap = useCallback(async (id: string) => {
-    if (document.hidden) return   // never poll when tab is hidden
-    if (abortRef.current) abortRef.current.abort()
-    abortRef.current = new AbortController()
-
-    const headers: Record<string, string> = {}
-    if (etagRef.current) headers['If-None-Match'] = etagRef.current
-
-    try {
-      const res = await fetch(`/api/snapshot/${id}`, {
-        signal: abortRef.current.signal,
-        headers,
-      })
-
-      // 304 = not modified, no Redis read triggered
-      if (res.status === 304) return
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      const etag = res.headers.get('ETag')
-      if (etag) etagRef.current = etag
-
-      const data: Snapshot = await res.json()
-      setSnapshot(data)
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') console.warn('snapshot failed')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   useEffect(() => {
     if (!eventId) { setSnapshot(null); setLoading(false); return }
 
-    // Reset state for new event
     setLoading(true)
-    etagRef.current = null
+    setSnapshot(null)
 
-    // Clear any existing interval
-    if (intervalRef.current) clearInterval(intervalRef.current)
+    // ── Step 1: one-time HTTP fetch for immediate initial state ─────────────
+    // This gets seed data instantly without waiting for a Realtime event.
+    // After this single fetch, all updates come via WebSocket — zero polling.
+    if (abortRef.current) abortRef.current.abort()
+    abortRef.current = new AbortController()
 
-    fetchSnap(eventId)
+    fetch(`/api/snapshot/${eventId}`, { signal: abortRef.current.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setSnapshot(data) })
+      .catch(err => { if (err.name !== 'AbortError') console.warn('initial snapshot failed') })
+      .finally(() => setLoading(false))
 
-    const isLive = () => snapshot?.countryCount !== undefined && snapshot.totalCount > 100
+    // ── Step 2: Supabase Realtime subscription for live updates ─────────────
+    // Cron writes to snapshots table when real data exists.
+    // We listen for INSERT events on this match — no polling, pure push.
+    const supabase = getSupabaseClient()
 
-    intervalRef.current = setInterval(
-      () => fetchSnap(eventId),
-      isLive() ? LIVE_POLL_MS : POLL_MS
-    )
+    channelRef.current = supabase
+      .channel(`snapshot:${eventId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'snapshots',
+          filter: `match_id=eq.${eventId}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
 
-    const handleVisibility = () => {
-      if (!document.hidden) fetchSnap(eventId)
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
+          // Build Snapshot from the DB row
+          const cityFull = Array.isArray(row.cities_full) ? row.cities_full : []
+          const fas = row.fas_score
+            ? { score: Number(row.fas_score), label: String(row.fas_label ?? 'Tepid'), color: String(row.fas_color ?? '#fff') }
+            : undefined
+
+          const snap: Snapshot = {
+            eventId: String(row.match_id),
+            sportId: String(row.sport_id ?? 'soccer'),
+            totalCount: Number(row.total ?? 0),
+            homeCount: Number(row.home_count ?? 0),
+            awayCount: Number(row.away_count ?? 0),
+            countryCount: Number(row.country_count ?? 0),
+            cities: cityFull,
+            pulse: {
+              fire:     Number(row.pulse_fire ?? 0),
+              ecstatic: Number(row.pulse_ecstatic ?? 0),
+              nervous:  Number(row.pulse_nervous ?? 0),
+              crushed:  Number(row.pulse_crushed ?? 0),
+              moment:   Number(row.pulse_moment ?? 0),
+            },
+            updatedAt: String(row.snapped_at ?? new Date().toISOString()),
+            fas,
+          }
+
+          setSnapshot(snap)
+          setLoading(false)
+        }
+      )
+      .subscribe()
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
       if (abortRef.current) abortRef.current.abort()
-      document.removeEventListener('visibilitychange', handleVisibility)
+      channelRef.current?.unsubscribe()
     }
-  }, [eventId, fetchSnap])
+  }, [eventId])
 
   return { snapshot, loading }
 }

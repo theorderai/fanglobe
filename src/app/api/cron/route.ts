@@ -90,11 +90,26 @@ export async function GET(req: NextRequest) {
     const withFas = { ...snapshot, fas: { score: fasResult.score, label: fasResult.label, color: fasResult.color } }
     await setCachedSnapshot(event.id, JSON.stringify(withFas))
 
+    // Write full snapshot to Supabase — triggers Realtime broadcast to all subscribers
+    // This replaces Redis as the delivery mechanism for live updates
     void supabase.from('snapshots').insert({
-      match_id: event.id, total: totalCount,
-      pulse_fire: pulse.fire, pulse_ecstatic: pulse.ecstatic,
-      pulse_nervous: pulse.nervous, pulse_crushed: pulse.crushed,
-      city_counts: cities,
+      match_id: event.id,
+      sport_id: event.sportId,
+      total: totalCount,
+      home_count: snapshot.homeCount,
+      away_count: snapshot.awayCount,
+      country_count: countryCount,
+      pulse_fire:     pulse.fire,
+      pulse_ecstatic: pulse.ecstatic,
+      pulse_nervous:  pulse.nervous,
+      pulse_crushed:  pulse.crushed,
+      pulse_moment:   pulse.moment ?? 0,
+      city_counts:    cities,          // raw Redis city counts
+      cities_full:    JSON.stringify(mergedCities), // full CityData array for Realtime
+      fas_score: fasResult.score,
+      fas_label: fasResult.label,
+      fas_color: fasResult.color,
+      snapped_at: new Date().toISOString(),
     })
 
     // AI cheers for real-data events every cron run
