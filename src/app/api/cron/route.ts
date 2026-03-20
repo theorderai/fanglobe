@@ -3,6 +3,7 @@ import { getEventSnapshot, setCachedSnapshot, seedEventData } from '@/lib/redis'
 import { createServiceClient } from '@/lib/supabase-server'
 import { generateCheers } from '@/lib/claude'
 import { getFallbackEvents, getEventSeedCities, MATCH_CONTEXT } from '@/lib/events'
+import { fasFromSnapshot } from '@/lib/fas'
 import type { Snapshot, CityData } from '@/types'
 
 export const runtime = 'nodejs'
@@ -26,12 +27,48 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServiceClient()
   const events = getFallbackEvents()
-  const results: Record<string, { total: number; cheersAdded: number }> = {}
+  const results: Record<string, { total: number; hasRealData: boolean; cheersAdded: number }> = {}
 
   await Promise.allSettled(events.map(async (event) => {
     const seedCities = getEventSeedCities(event.id)
-    await seedEventData(event.id, seedCities, event.sportId)
+    const seedTotal = seedCities.reduce((s, c) => s + c.count, 0)
 
+    // ── Check if any real checkins exist for this event ──────────────────
+    // Only hit Redis if we actually have real user data to merge
+    const { count: realCheckinCount } = await supabase
+      .from('checkins')
+      .select('id', { count: 'exact', head: true })
+      .eq('match_id', event.id)
+
+    const hasRealData = (realCheckinCount ?? 0) > 0
+
+    if (!hasRealData) {
+      // No real checkins yet — seed data is served directly by snapshot route
+      // from memory. No Redis reads needed. Skip.
+      results[event.id] = { total: seedTotal, hasRealData: false, cheersAdded: 0 }
+
+      // Still generate AI cheers occasionally (1 in 3 cron runs)
+      if (Math.random() < 0.33) {
+        const context = MATCH_CONTEXT[event.id] ?? event.label
+        const city = seedCities[Math.floor(Math.random() * Math.min(5, seedCities.length))]
+        if (city) {
+          const vibe = pickVibe()
+          const texts = await generateCheers({ matchContext: context, city: city.city, flag: city.flag, vibe, count: 1 })
+          if (texts[0]) {
+            await supabase.from('cheers').insert({
+              match_id: event.id, event_id: event.id, sport_id: event.sportId,
+              city: city.city, country: city.country, flag: city.flag,
+              text: texts[0], vibe, source: 'ai', moderated: true,
+            })
+            results[event.id].cheersAdded = 1
+          }
+        }
+      }
+      return
+    }
+
+    // ── Real checkins exist — build full snapshot with Redis ─────────────
+    await seedEventData(event.id, seedCities, event.sportId)
     const { total, homeTotal, awayTotal, cities, pulse } = await getEventSnapshot(event.id)
 
     const mergedCities: CityData[] = seedCities.map(seed => ({
@@ -40,7 +77,6 @@ export async function GET(req: NextRequest) {
 
     const totalCount = mergedCities.reduce((s, c) => s + c.count, 0)
     const countryCount = Array.from(new Set(mergedCities.map(c => c.country))).length
-    const seedTotal = seedCities.reduce((s, c) => s + c.count, 0)
 
     const snapshot: Snapshot = {
       eventId: event.id, sportId: event.sportId, totalCount,
@@ -50,7 +86,9 @@ export async function GET(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     }
 
-    await setCachedSnapshot(event.id, JSON.stringify(snapshot))
+    const fasResult = fasFromSnapshot(snapshot, event.sportId)
+    const withFas = { ...snapshot, fas: { score: fasResult.score, label: fasResult.label, color: fasResult.color } }
+    await setCachedSnapshot(event.id, JSON.stringify(withFas))
 
     void supabase.from('snapshots').insert({
       match_id: event.id, total: totalCount,
@@ -59,6 +97,7 @@ export async function GET(req: NextRequest) {
       city_counts: cities,
     })
 
+    // AI cheers for real-data events every cron run
     const context = MATCH_CONTEXT[event.id] ?? event.label
     const topCities = mergedCities.slice(0, 5)
     let cheersAdded = 0
@@ -77,7 +116,7 @@ export async function GET(req: NextRequest) {
       cheersAdded++
     }))
 
-    results[event.id] = { total: totalCount, cheersAdded }
+    results[event.id] = { total: totalCount, hasRealData: true, cheersAdded }
   }))
 
   return NextResponse.json({ ok: true, results, ts: new Date().toISOString() })

@@ -15,8 +15,14 @@ export async function GET(
 ) {
   const { eventId } = params
 
-  // ── 1. Redis cache hit → return immediately, 1 read, done ──────────────
-  const cached = await getCachedSnapshot(eventId)
+  // ── 1. Fast path: known seed slugs skip Redis entirely ────────────────
+  // Seed data never changes, so we serve it from memory with a long cache header.
+  // Redis is only checked for events with real checkin data.
+  const allFallbackQuick = getFallbackEvents()
+  const isSeedOnlyEvent = allFallbackQuick.some(e => (e.slug ?? e.id) === eventId || e.id === eventId)
+
+  // ── 2. Redis cache hit (real data events only) ──────────────────────────
+  const cached = isSeedOnlyEvent ? null : await getCachedSnapshot(eventId)
   if (cached) {
     // If cached snapshot predates FAS, compute and inject it now
     let body = cached
