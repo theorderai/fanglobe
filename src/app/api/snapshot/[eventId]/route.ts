@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCachedSnapshot, setCachedSnapshot } from '@/lib/redis'
-import { fasFromSnapshot } from '@/lib/fas'
 import { getFallbackEvents, getEventSeedCities } from '@/lib/events'
 import { createServiceClient } from '@/lib/supabase-server'
+import { fasFromSnapshot } from '@/lib/fas'
 import type { Snapshot, CityData } from '@/types'
 
 export const runtime = 'nodejs'
-export const revalidate = 3
+// No Next.js revalidation — we control caching explicitly via headers
+export const revalidate = 0
 
 export async function GET(
   _req: NextRequest,
@@ -14,28 +15,28 @@ export async function GET(
 ) {
   const { eventId } = params
 
-  // Try pre-built Redis cache first
+  // ── 1. Redis cache hit → return immediately, 1 read, done ──────────────
   const cached = await getCachedSnapshot(eventId)
   if (cached) {
     return new NextResponse(cached, {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=3, stale-while-revalidate=10',
+        // CDN: serve for 60s, stale-while-revalidate for 2min
+        // Client: browser caches for 30s (aligns with poll interval)
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
         'X-Cache': 'HIT',
       },
     })
   }
 
-  // Try to find event — first in fallback data (string IDs), then in DB (UUIDs)
+  // ── 2. Cache miss → find event ──────────────────────────────────────────
   const allFallback = getFallbackEvents()
-  let event = allFallback.find(e => e.id === eventId)
+  let event = allFallback.find(e => e.id === eventId || e.slug === eventId)
   let seedCities: CityData[] = getEventSeedCities(eventId)
 
-  // If not found in fallback, fetch from DB — try slug first, then UUID
   if (!event) {
     try {
       const supabase = createServiceClient()
-      // Try by slug first (frontend passes slug), then by UUID
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId)
       const { data } = await supabase
         .from('events')
@@ -45,40 +46,22 @@ export async function GET(
 
       if (data) {
         event = {
-          id: data.id,
-          slug: data.slug,
-          sportId: data.sport_id,
-          homeTeam: data.home_team,
-          awayTeam: data.away_team,
-          homeFlag: data.home_flag ?? '',
-          awayFlag: data.away_flag ?? '',
-          homeColor: data.home_color,
-          awayColor: data.away_color,
+          id: data.id, slug: data.slug, sportId: data.sport_id,
+          homeTeam: data.home_team, awayTeam: data.away_team,
+          homeFlag: data.home_flag ?? '', awayFlag: data.away_flag ?? '',
+          homeColor: data.home_color, awayColor: data.away_color,
           label: data.label ?? `${data.home_team} vs ${data.away_team}`,
-          venue: data.venue,
-          venueShort: data.venue_short,
-          stadLat: data.stad_lat,
-          stadLng: data.stad_lng,
-          camLat: data.cam_lat ?? 20,
-          camLng: data.cam_lng ?? 0,
-          camAlt: data.cam_alt ?? 2.2,
-          kickoffAt: data.kickoff_at,
-          status: data.status,
-          isRivalry: data.is_rivalry ?? false,
-          isFeatured: data.is_featured ?? false,
+          venue: data.venue, venueShort: data.venue_short,
+          stadLat: data.stad_lat, stadLng: data.stad_lng,
+          camLat: data.cam_lat ?? 20, camLng: data.cam_lng ?? 0, camAlt: data.cam_alt ?? 2.2,
+          kickoffAt: data.kickoff_at, status: data.status,
+          isRivalry: data.is_rivalry ?? false, isFeatured: data.is_featured ?? false,
         }
-        // Look up seed cities by slug first, then by team name match
-        if (data.slug) {
-          seedCities = getEventSeedCities(data.slug)
-        }
-        if (seedCities.length === 0) {
-          const matchingFallback = allFallback.find(f =>
-            f.sportId === data.sport_id &&
-            (f.homeTeam === data.home_team || f.awayTeam === data.away_team)
-          )
-          if (matchingFallback) {
-            seedCities = getEventSeedCities(matchingFallback.id)
-          }
+        if (data.slug) seedCities = getEventSeedCities(data.slug)
+        if (!seedCities.length) {
+          const m = allFallback.find(f => f.sportId === data.sport_id &&
+            (f.homeTeam === data.home_team || f.awayTeam === data.away_team))
+          if (m) seedCities = getEventSeedCities(m.id)
         }
       }
     } catch (e) {
@@ -86,23 +69,21 @@ export async function GET(
     }
   }
 
-  // Still not found — return empty snapshot rather than 404
-  // This prevents the polling loop from spamming errors
   if (!event) {
-    const emptySnapshot: Snapshot = {
+    // Unknown event — return empty, do NOT write to Redis
+    const empty: Snapshot = {
       eventId, sportId: 'soccer', totalCount: 0, homeCount: 0, awayCount: 0,
-      cities: [], pulse: { fire: 0, ecstatic: 0, nervous: 0, crushed: 0, moment: 0 },
+      cities: [], pulse: { fire:0,ecstatic:0,nervous:0,crushed:0,moment:0 },
       countryCount: 0, updatedAt: new Date().toISOString(),
     }
-    return NextResponse.json(emptySnapshot, {
-      headers: { 'Cache-Control': 'public, s-maxage=5' }
+    return new NextResponse(JSON.stringify(empty), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     })
   }
 
-  // Build snapshot from seed data only (no raw Redis reads)
-  // Raw Redis reads only happen in the cron job which writes the cache
+  // ── 3. Build snapshot from seed data (0 additional Redis reads) ─────────
   const seedTotal = seedCities.reduce((s, c) => s + c.count, 0)
-  const countryCount = Array.from(new Set(seedCities.map(c => c.country))).length
+  const countryCount = new Set(seedCities.map(c => c.country).filter(Boolean)).size
 
   const snapshot: Snapshot = {
     eventId, sportId: event.sportId,
@@ -110,21 +91,34 @@ export async function GET(
     homeCount: Math.floor(seedTotal * 0.48),
     awayCount: Math.floor(seedTotal * 0.47),
     cities: seedCities,
-    pulse: { fire: Math.floor(seedTotal * 0.35), ecstatic: Math.floor(seedTotal * 0.28), nervous: Math.floor(seedTotal * 0.24), crushed: Math.floor(seedTotal * 0.10), moment: Math.floor(seedTotal * 0.03) },
+    pulse: {
+      fire:     Math.floor(seedTotal * 0.35),
+      ecstatic: Math.floor(seedTotal * 0.28),
+      nervous:  Math.floor(seedTotal * 0.24),
+      crushed:  Math.floor(seedTotal * 0.10),
+      moment:   Math.floor(seedTotal * 0.03),
+    },
     countryCount,
     updatedAt: new Date().toISOString(),
   }
 
-  // Compute FAS score
-  const fasResult = fasFromSnapshot(snapshot, event?.sportId)
-  const snapshotWithFas = { ...snapshot, fas: { score: fasResult.score, label: fasResult.label, color: fasResult.color } }
-  const body = JSON.stringify(snapshotWithFas)
-  // Cache for 5 minutes — no need to refresh static seed data frequently
-  await setCachedSnapshot(eventId, body)
+  // Compute FAS
+  const fasResult = fasFromSnapshot(snapshot, event.sportId)
+  const withFas = { ...snapshot, fas: { score: fasResult.score, label: fasResult.label, color: fasResult.color } }
+  const body = JSON.stringify(withFas)
+
+  // ── 4. Write to Redis ONLY if there's real data (seed total > 0) ────────
+  // This cache is updated by the cron when real checkins exist.
+  // For pure seed data: cache in Redis for 5min to avoid recomputing,
+  // but only if seedTotal > 0 (don't pollute Redis with empty events)
+  if (seedTotal > 0) {
+    await setCachedSnapshot(eventId, body)
+  }
 
   return new NextResponse(body, {
     headers: {
       'Content-Type': 'application/json',
+      // Seed data: cache at CDN for 5min, stale for 10min
       'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
       'X-Cache': 'SEED',
     },

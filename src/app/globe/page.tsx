@@ -259,12 +259,17 @@ export default function GlobePage() {
     if (!localStorage.getItem('fg_onboarded')) setTimeout(()=>setShowOnboarding(true),900)
   }, [])
 
-  // One-time snapshot prefetch for match browser
+  // One-time prefetch for match browser fan counts — max 4, no polling
   useEffect(() => {
     if (!events.length) return
-    events.filter(e=>e.isFeatured).slice(0,6).forEach(ev => {
-      fetch(`/api/snapshot/${ev.slug??ev.id}`,{cache:'force-cache'})
-        .then(r=>r.json()).then(d=>{ if(d.totalCount!==undefined) setSnapshots(p=>({...p,[ev.slug??ev.id]:{totalCount:d.totalCount,pulse:{fire:d.pulse?.fire??0,ecstatic:d.pulse?.ecstatic??0,nervous:d.pulse?.nervous??0,crushed:d.pulse?.crushed??0,moment:d.pulse?.moment??0}}})) }).catch(()=>{})
+    events.filter(e=>e.isFeatured).slice(0,4).forEach(ev => {
+      const key = ev.slug ?? ev.id
+      fetch(`/api/snapshot/${key}`, { cache:'force-cache' })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.totalCount !== undefined)
+            setSnapshots(p => ({ ...p, [key]: { totalCount: d.totalCount, pulse: { fire:d.pulse?.fire??0, ecstatic:d.pulse?.ecstatic??0, nervous:d.pulse?.nervous??0, crushed:d.pulse?.crushed??0, moment:d.pulse?.moment??0 } } }))
+        }).catch(() => {})
     })
   }, [events.length])
 
