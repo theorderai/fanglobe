@@ -123,7 +123,7 @@ function VibeMeter({ pulse, userVibe, accent, onVote }: {
   )
 }
 
-function FanCounter({ total, countryCount, teamName, accent }: { total:number; countryCount:number; teamName:string; accent:string }) {
+function FanCounter({ total, countryCount, teamName, accent, fas }: { total:number; countryCount:number; teamName:string; accent:string; fas?: { score:number; label:string; color:string } }) {
   return (
     <div style={{ textAlign:'center' }}>
       <div style={{ fontSize:9,color:'rgba(255,255,255,0.35)',letterSpacing:'2px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace",marginBottom:2 }}>
@@ -135,6 +135,13 @@ function FanCounter({ total, countryCount, teamName, accent }: { total:number; c
       <div style={{ fontSize:9,color:'rgba(255,255,255,0.28)',letterSpacing:'2.5px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace",marginTop:2 }}>
         fans watching {teamName}
       </div>
+      {fas && fas.score > 0 && (
+        <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginTop:8,background:'rgba(255,255,255,0.05)',border:`1px solid ${fas.color}33`,borderRadius:100,padding:'4px 12px' }}>
+          <span style={{ fontSize:9,color:'rgba(255,255,255,0.3)',fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px' }}>FAS</span>
+          <span style={{ fontSize:16,fontWeight:800,color:fas.color,fontFamily:"'JetBrains Mono',monospace",lineHeight:1 }}>{fas.score}</span>
+          <span style={{ fontSize:9,fontWeight:700,color:fas.color,letterSpacing:'0.5px' }}>{fas.label.toUpperCase()}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -409,7 +416,7 @@ export default function GlobePage() {
       {/* ── BOTTOM PANEL ───────────────────────────────────────── */}
       <div style={{ flexShrink:0,background:'#080810',borderTop:'1px solid rgba(255,255,255,0.06)',padding:`8px ${isMobile?'12px':'20%'} env(safe-area-inset-bottom,6px)` }}>
         {/* Fan counter */}
-        <FanCounter total={total} countryCount={countryCount} teamName={teamName} accent={accent} />
+        <FanCounter total={total} countryCount={countryCount} teamName={teamName} accent={accent} fas={snapshot?.fas} />
 
         {/* CTA */}
         <div style={{ margin:'8px 0 6px' }}>

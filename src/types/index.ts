@@ -18,7 +18,7 @@ export interface FanGlobeEvent {
 export interface Vibe { key: string; emoji: string; label: string }
 export interface Pulse { fire: number; ecstatic: number; nervous: number; crushed: number; moment: number; [key: string]: number }
 export interface CityData { city: string; flag: string; lat: number; lng: number; count: number; country: string; homeCount?: number; awayCount?: number }
-export interface Snapshot { eventId: string; sportId: string; totalCount: number; homeCount: number; awayCount: number; cities: CityData[]; pulse: Pulse; countryCount: number; updatedAt: string }
+export interface Snapshot { eventId: string; sportId: string; totalCount: number; homeCount: number; awayCount: number; cities: CityData[]; pulse: Pulse; countryCount: number; updatedAt: string; fas?: { score: number; label: string; color: string } }
 export interface Cheer { id: string; eventId: string; sportId: string; city: string; country: string; flag: string; text: string; vibe: string; source: 'ai'|'user'; displayName?: string; createdAt: string }
 export interface Moment { id: string; eventId: string; sportId: string; type: string; label: string; minute?: number; reactionCount: number; cardImageUrl?: string; createdAt: string }
 export interface FanPassport { userId: string; favouriteSports: string[]; favouriteTeams: Record<string,string>; checkinCount: number; sportsCount: number; eventsCount: number; badges: string[]; streakDays: number; lastCheckinAt?: string }

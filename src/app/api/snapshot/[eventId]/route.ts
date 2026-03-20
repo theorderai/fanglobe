@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCachedSnapshot, setCachedSnapshot } from '@/lib/redis'
+import { fasFromSnapshot } from '@/lib/fas'
 import { getFallbackEvents, getEventSeedCities } from '@/lib/events'
 import { createServiceClient } from '@/lib/supabase-server'
 import type { Snapshot, CityData } from '@/types'
@@ -114,7 +115,10 @@ export async function GET(
     updatedAt: new Date().toISOString(),
   }
 
-  const body = JSON.stringify(snapshot)
+  // Compute FAS score
+  const fasResult = fasFromSnapshot(snapshot, event?.sportId)
+  const snapshotWithFas = { ...snapshot, fas: { score: fasResult.score, label: fasResult.label, color: fasResult.color } }
+  const body = JSON.stringify(snapshotWithFas)
   // Cache for 5 minutes — no need to refresh static seed data frequently
   await setCachedSnapshot(eventId, body)
 
