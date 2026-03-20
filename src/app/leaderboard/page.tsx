@@ -26,9 +26,10 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const match = params.get('match')
+    // Set both at once to avoid double-fetch from state update triggering re-render
     if (match) setSelectedMatch(match)
     fetchData(match)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async (match: string | null) => {
     setLoading(true)

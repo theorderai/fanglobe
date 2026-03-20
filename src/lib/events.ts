@@ -97,12 +97,27 @@ export const WC2026_EVENTS: FanGlobeEvent[] = [
   ev('f1-monaco-2026','f1','Monaco GP','Round 8','🏎️','🏁','#FF0000','#00D2BE','monaco','2026-05-24T13:00:00Z',false,true),
 ]
 
+const UPCOMING_SPORTS_EVENTS: FanGlobeEvent[] = [] // populated from DB at runtime
+
 export function getFallbackEvents(limit = 16): FanGlobeEvent[] {
   const TODAY_TS = new Date('2026-03-19T00:00:00Z').getTime()
   const all = [...UPCOMING_SPORTS_EVENTS, ...WC2026_EVENTS]
     .filter(e => new Date(e.kickoffAt).getTime() >= TODAY_TS && e.isFeatured)
     .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
   return all.slice(0, limit)
+}
+
+export function getUpcomingEvents(sportId?: string, limit = 120): FanGlobeEvent[] {
+  const TODAY_TS = new Date('2026-03-19T00:00:00Z').getTime()
+  let all = [...UPCOMING_SPORTS_EVENTS, ...WC2026_EVENTS]
+    .filter(e => new Date(e.kickoffAt).getTime() >= TODAY_TS)
+    .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
+  if (sportId) all = all.filter(e => e.sportId === sportId)
+  return all.slice(0, limit)
+}
+
+export function getUpcomingFeatured(limit = 8): FanGlobeEvent[] {
+  return getUpcomingEvents().filter(e => e.isFeatured).slice(0, limit)
 }
 
 export async function getLiveEvents(limit = 20): Promise<FanGlobeEvent[]> {
@@ -299,6 +314,228 @@ export const EVENT_SEED_CITIES: Record<string, CityData[]> = {
     {city:'Sydney',flag:'🇦🇺',lat:-33.87,lng:151.21,count:14000,country:'Australia'},
     {city:'Johannesburg',flag:'🇿🇦',lat:-26.20,lng:28.04,count:12000,country:'S.Africa'},
   ],
+  // ── UCL 2025/26 ──────────────────────────────────────────────────────────
+  'ucl-psg-liverpool': [
+    {city:'Paris',flag:'🇫🇷',lat:48.85,lng:2.35,count:284000,country:'France'},
+    {city:'Liverpool',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:53.41,lng:-2.98,count:241000,country:'England'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:198000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:87000,country:'USA'},
+    {city:'Madrid',flag:'🇪🇸',lat:40.42,lng:-3.70,count:72000,country:'Spain'},
+    {city:'Berlin',flag:'🇩🇪',lat:52.52,lng:13.40,count:58000,country:'Germany'},
+    {city:'São Paulo',flag:'🇧🇷',lat:-23.55,lng:-46.63,count:51000,country:'Brazil'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:44000,country:'UAE'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:38000,country:'India'},
+    {city:'Toronto',flag:'🇨🇦',lat:43.65,lng:-79.38,count:31000,country:'Canada'},
+  ],
+  'ucl-realmadrid-bayern': [
+    {city:'Madrid',flag:'🇪🇸',lat:40.42,lng:-3.70,count:312000,country:'Spain'},
+    {city:'Munich',flag:'🇩🇪',lat:48.14,lng:11.58,count:278000,country:'Germany'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:142000,country:'England'},
+    {city:'Barcelona',flag:'🇪🇸',lat:41.39,lng:2.15,count:128000,country:'Spain'},
+    {city:'Berlin',flag:'🇩🇪',lat:52.52,lng:13.40,count:98000,country:'Germany'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:84000,country:'USA'},
+    {city:'São Paulo',flag:'🇧🇷',lat:-23.55,lng:-46.63,count:71000,country:'Brazil'},
+    {city:'Buenos Aires',flag:'🇦🇷',lat:-34.60,lng:-58.38,count:62000,country:'Argentina'},
+    {city:'Paris',flag:'🇫🇷',lat:48.85,lng:2.35,count:55000,country:'France'},
+    {city:'Tokyo',flag:'🇯🇵',lat:35.68,lng:139.69,count:48000,country:'Japan'},
+  ],
+  'ucl-barcelona-atletico': [
+    {city:'Barcelona',flag:'🇪🇸',lat:41.39,lng:2.15,count:298000,country:'Spain'},
+    {city:'Madrid',flag:'🇪🇸',lat:40.42,lng:-3.70,count:271000,country:'Spain'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:118000,country:'England'},
+    {city:'Buenos Aires',flag:'🇦🇷',lat:-34.60,lng:-58.38,count:104000,country:'Argentina'},
+    {city:'São Paulo',flag:'🇧🇷',lat:-23.55,lng:-46.63,count:89000,country:'Brazil'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:76000,country:'USA'},
+    {city:'Mexico City',flag:'🇲🇽',lat:19.43,lng:-99.13,count:68000,country:'Mexico'},
+    {city:'Paris',flag:'🇫🇷',lat:48.85,lng:2.35,count:52000,country:'France'},
+    {city:'Rome',flag:'🇮🇹',lat:41.90,lng:12.50,count:44000,country:'Italy'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:38000,country:'UAE'},
+  ],
+  'ucl-arsenal-sporting': [
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:318000,country:'England'},
+    {city:'Lisbon',flag:'🇵🇹',lat:38.72,lng:-9.14,count:187000,country:'Portugal'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:94000,country:'USA'},
+    {city:'Manchester',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:53.48,lng:-2.24,count:88000,country:'England'},
+    {city:'Dublin',flag:'🇮🇪',lat:53.33,lng:-6.25,count:72000,country:'Ireland'},
+    {city:'Lagos',flag:'🇳🇬',lat:6.52,lng:3.38,count:64000,country:'Nigeria'},
+    {city:'Toronto',flag:'🇨🇦',lat:43.65,lng:-79.38,count:58000,country:'Canada'},
+    {city:'Sydney',flag:'🇦🇺',lat:-33.87,lng:151.21,count:44000,country:'Australia'},
+    {city:'São Paulo',flag:'🇧🇷',lat:-23.55,lng:-46.63,count:38000,country:'Brazil'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:32000,country:'UAE'},
+  ],
+  'ucl-sf1': [
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:420000,country:'England'},
+    {city:'Paris',flag:'🇫🇷',lat:48.85,lng:2.35,count:380000,country:'France'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:178000,country:'USA'},
+    {city:'São Paulo',flag:'🇧🇷',lat:-23.55,lng:-46.63,count:142000,country:'Brazil'},
+    {city:'Madrid',flag:'🇪🇸',lat:40.42,lng:-3.70,count:128000,country:'Spain'},
+    {city:'Lagos',flag:'🇳🇬',lat:6.52,lng:3.38,count:98000,country:'Nigeria'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:87000,country:'India'},
+    {city:'Tokyo',flag:'🇯🇵',lat:35.68,lng:139.69,count:74000,country:'Japan'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:62000,country:'UAE'},
+    {city:'Mexico City',flag:'🇲🇽',lat:19.43,lng:-99.13,count:54000,country:'Mexico'},
+  ],
+  'ucl-sf2': [
+    {city:'Barcelona',flag:'🇪🇸',lat:41.39,lng:2.15,count:398000,country:'Spain'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:354000,country:'England'},
+    {city:'Madrid',flag:'🇪🇸',lat:40.42,lng:-3.70,count:298000,country:'Spain'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:162000,country:'USA'},
+    {city:'Buenos Aires',flag:'🇦🇷',lat:-34.60,lng:-58.38,count:138000,country:'Argentina'},
+    {city:'São Paulo',flag:'🇧🇷',lat:-23.55,lng:-46.63,count:124000,country:'Brazil'},
+    {city:'Munich',flag:'🇩🇪',lat:48.14,lng:11.58,count:108000,country:'Germany'},
+    {city:'Lisbon',flag:'🇵🇹',lat:38.72,lng:-9.14,count:88000,country:'Portugal'},
+    {city:'Lagos',flag:'🇳🇬',lat:6.52,lng:3.38,count:72000,country:'Nigeria'},
+    {city:'Toronto',flag:'🇨🇦',lat:43.65,lng:-79.38,count:58000,country:'Canada'},
+  ],
+  'ucl-final-2026': [
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:680000,country:'England'},
+    {city:'Madrid',flag:'🇪🇸',lat:40.42,lng:-3.70,count:598000,country:'Spain'},
+    {city:'Paris',flag:'🇫🇷',lat:48.85,lng:2.35,count:524000,country:'France'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:312000,country:'USA'},
+    {city:'São Paulo',flag:'🇧🇷',lat:-23.55,lng:-46.63,count:278000,country:'Brazil'},
+    {city:'Buenos Aires',flag:'🇦🇷',lat:-34.60,lng:-58.38,count:241000,country:'Argentina'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:198000,country:'India'},
+    {city:'Lagos',flag:'🇳🇬',lat:6.52,lng:3.38,count:162000,country:'Nigeria'},
+    {city:'Tokyo',flag:'🇯🇵',lat:35.68,lng:139.69,count:144000,country:'Japan'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:128000,country:'UAE'},
+    {city:'Mexico City',flag:'🇲🇽',lat:19.43,lng:-99.13,count:112000,country:'Mexico'},
+    {city:'Istanbul',flag:'🇹🇷',lat:41.01,lng:28.95,count:98000,country:'Turkey'},
+  ],
+  // ── IPL 2026 ──────────────────────────────────────────────────────────────
+  'ipl-rcb-srh': [
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:184000,country:'India'},
+    {city:'Hyderabad',flag:'🇮🇳',lat:17.38,lng:78.47,count:142000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:118000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:98000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:87000,country:'India'},
+    {city:'Kolkata',flag:'🇮🇳',lat:22.57,lng:88.36,count:72000,country:'India'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:58000,country:'England'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:51000,country:'UAE'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:44000,country:'USA'},
+    {city:'Toronto',flag:'🇨🇦',lat:43.65,lng:-79.38,count:31000,country:'Canada'},
+  ],
+  'ipl-mi-kkr': [
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:212000,country:'India'},
+    {city:'Kolkata',flag:'🇮🇳',lat:22.57,lng:88.36,count:198000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:112000,country:'India'},
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:94000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:78000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:62000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:54000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:48000,country:'USA'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:38000,country:'Singapore'},
+    {city:'Sydney',flag:'🇦🇺',lat:-33.87,lng:151.21,count:32000,country:'Australia'},
+  ],
+  'ipl-rr-csk': [
+    {city:'Jaipur',flag:'🇮🇳',lat:26.91,lng:75.79,count:168000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:154000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:118000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:98000,country:'India'},
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:84000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:68000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:52000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:44000,country:'USA'},
+    {city:'Toronto',flag:'🇨🇦',lat:43.65,lng:-79.38,count:36000,country:'Canada'},
+    {city:'Colombo',flag:'🇱🇰',lat:6.93,lng:79.85,count:28000,country:'Sri Lanka'},
+  ],
+  'ipl-rcb-mi': [
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:198000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:224000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:108000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:88000,country:'India'},
+    {city:'Kolkata',flag:'🇮🇳',lat:22.57,lng:88.36,count:72000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:64000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:56000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:48000,country:'USA'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:38000,country:'Singapore'},
+    {city:'Sydney',flag:'🇦🇺',lat:-33.87,lng:151.21,count:31000,country:'Australia'},
+  ],
+  'ipl-kkr-srh': [
+    {city:'Kolkata',flag:'🇮🇳',lat:22.57,lng:88.36,count:188000,country:'India'},
+    {city:'Hyderabad',flag:'🇮🇳',lat:17.38,lng:78.47,count:162000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:112000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:94000,country:'India'},
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:78000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:58000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:48000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:42000,country:'USA'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:34000,country:'Singapore'},
+    {city:'Sydney',flag:'🇦🇺',lat:-33.87,lng:151.21,count:28000,country:'Australia'},
+  ],
+  'ipl-dc-mi': [
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:178000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:198000,country:'India'},
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:102000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:84000,country:'India'},
+    {city:'Kolkata',flag:'🇮🇳',lat:22.57,lng:88.36,count:72000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:58000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:48000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:42000,country:'USA'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:34000,country:'Singapore'},
+    {city:'Toronto',flag:'🇨🇦',lat:43.65,lng:-79.38,count:28000,country:'Canada'},
+  ],
+  'ipl-csk-pbks': [
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:192000,country:'India'},
+    {city:'Chandigarh',flag:'🇮🇳',lat:30.73,lng:76.78,count:144000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:108000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:92000,country:'India'},
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:78000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:62000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:52000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:44000,country:'USA'},
+    {city:'Colombo',flag:'🇱🇰',lat:6.93,lng:79.85,count:36000,country:'Sri Lanka'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:28000,country:'Singapore'},
+  ],
+  'ipl-rcb-gt': [
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:186000,country:'India'},
+    {city:'Ahmedabad',flag:'🇮🇳',lat:23.03,lng:72.57,count:164000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:108000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:88000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:72000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:56000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:48000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:42000,country:'USA'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:34000,country:'Singapore'},
+    {city:'Sydney',flag:'🇦🇺',lat:-33.87,lng:151.21,count:28000,country:'Australia'},
+  ],
+  'ipl-rr-mi': [
+    {city:'Jaipur',flag:'🇮🇳',lat:26.91,lng:75.79,count:172000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:218000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:102000,country:'India'},
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:84000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:72000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:58000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:48000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:42000,country:'USA'},
+    {city:'Colombo',flag:'🇱🇰',lat:6.93,lng:79.85,count:34000,country:'Sri Lanka'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:28000,country:'Singapore'},
+  ],
+  'ipl-rcb-rr': [
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:194000,country:'India'},
+    {city:'Jaipur',flag:'🇮🇳',lat:26.91,lng:75.79,count:162000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:118000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:94000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:78000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:62000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:52000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:44000,country:'USA'},
+    {city:'Colombo',flag:'🇱🇰',lat:6.93,lng:79.85,count:36000,country:'Sri Lanka'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:28000,country:'Singapore'},
+  ],
+  'ipl-final': [
+    {city:'Bengaluru',flag:'🇮🇳',lat:12.97,lng:77.59,count:384000,country:'India'},
+    {city:'Mumbai',flag:'🇮🇳',lat:19.08,lng:72.88,count:342000,country:'India'},
+    {city:'Delhi',flag:'🇮🇳',lat:28.61,lng:77.23,count:228000,country:'India'},
+    {city:'Chennai',flag:'🇮🇳',lat:13.08,lng:80.27,count:198000,country:'India'},
+    {city:'Kolkata',flag:'🇮🇳',lat:22.57,lng:88.36,count:178000,country:'India'},
+    {city:'Dubai',flag:'🇦🇪',lat:25.20,lng:55.27,count:142000,country:'UAE'},
+    {city:'London',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',lat:51.51,lng:-0.13,count:118000,country:'England'},
+    {city:'New York',flag:'🇺🇸',lat:40.71,lng:-74.00,count:98000,country:'USA'},
+    {city:'Singapore',flag:'🇸🇬',lat:1.35,lng:103.82,count:78000,country:'Singapore'},
+    {city:'Colombo',flag:'🇱🇰',lat:6.93,lng:79.85,count:64000,country:'Sri Lanka'},
+    {city:'Sydney',flag:'🇦🇺',lat:-33.87,lng:151.21,count:52000,country:'Australia'},
+    {city:'Toronto',flag:'🇨🇦',lat:43.65,lng:-79.38,count:44000,country:'Canada'},
+  ],
 }
 
 // Build a default seed for events without explicit data
@@ -322,6 +559,7 @@ function defaultSeed(event: FanGlobeEvent): CityData[] {
 export function getEventSeedCities(eventId: string): CityData[] {
   // Slug aliases for new DB events → existing seed data
   const slugAliases: Record<string, string> = {
+    // World Cup 2026
     'wc26-c1-bra-mar': 'wc-brazil-morocco',
     'wc26-d1-usa-par': 'wc-usa-paraguay',
     'wc26-d2-usa-aus': 'wc-d2-usa-australia',
@@ -330,8 +568,34 @@ export function getEventSeedCities(eventId: string): CityData[] {
     'wc26-j1-arg-alg': 'wc-j1-argentina-algeria',
     'wc26-l1-eng-cro': 'wc-l1-england-croatia',
     'wc26-final':      'wc-final',
+    // Cricket
     'ind-pak-2026':    'cricket-india-pakistan',
-    'ucl26-final':     'ucl-final-2026',
+    // UCL 2025/26
+    'ucl26-qf1-psg-liv':   'ucl-psg-liverpool',
+    'ucl26-qf1b-liv-psg':  'ucl-psg-liverpool',
+    'ucl26-qf2-rma-bay':   'ucl-realmadrid-bayern',
+    'ucl26-qf2b-bay-rma':  'ucl-realmadrid-bayern',
+    'ucl26-qf3-bar-atl':   'ucl-barcelona-atletico',
+    'ucl26-qf3b-atl-bar':  'ucl-barcelona-atletico',
+    'ucl26-qf4-scp-ars':   'ucl-arsenal-sporting',
+    'ucl26-qf4b-ars-scp':  'ucl-arsenal-sporting',
+    'ucl26-sf1-leg1':      'ucl-sf1',
+    'ucl26-sf1-leg2':      'ucl-sf1',
+    'ucl26-sf2-leg1':      'ucl-sf2',
+    'ucl26-sf2-leg2':      'ucl-sf2',
+    'ucl26-final':         'ucl-final-2026',
+    // IPL 2026
+    'ipl26-m1-rcb-srh':    'ipl-rcb-srh',
+    'ipl26-m2-mi-kkr':     'ipl-mi-kkr',
+    'ipl26-m3-rr-csk':     'ipl-rr-csk',
+    'ipl26-m6-rcb-mi':     'ipl-rcb-mi',
+    'ipl26-m7-kkr-srh':    'ipl-kkr-srh',
+    'ipl26-m8-dc-mi':      'ipl-dc-mi',
+    'ipl26-m10-csk-pbks':  'ipl-csk-pbks',
+    'ipl26-m12-rcb-gt':    'ipl-rcb-gt',
+    'ipl26-m14-rr-mi':     'ipl-rr-mi',
+    'ipl26-m18-rcb-rr':    'ipl-rcb-rr',
+    'ipl26-final':         'ipl-final',
   }
   const resolved = slugAliases[eventId] ?? eventId
   const explicit = EVENT_SEED_CITIES[resolved]
@@ -358,64 +622,4 @@ export const MATCH_CONTEXT: Record<string, string> = {
   'wc-final': 'FIFA World Cup 2026 Final — The biggest match on Earth, MetLife Stadium NJ, July 19 2026',
   'cricket-india-pakistan': 'India vs Pakistan — Most watched cricket match on Earth, 1.4 billion vs 220 million, pure drama',
   'f1-monaco-2026': 'Monaco Grand Prix 2026 — Most glamorous race on earth, street circuit, F1\'s crown jewel',
-}
-
-// ── Upcoming non-WC sports events (from March 19, 2026) ─────────────────────
-export const UPCOMING_SPORTS_EVENTS: FanGlobeEvent[] = [
-  // ── F1 2026 ───────────────────────────────────────────────────────────────
-  ev('f1-japan-2026','f1','Japanese GP','Round 4','🏎️','🏁','#FF1801','#00D2BE',
-    'monaco','2026-04-05T05:00:00Z',false,true),
-  ev('f1-bahrain-2026','f1','Bahrain GP','Round 5','🏎️','🏁','#FF1801','#00D2BE',
-    'monaco','2026-04-19T15:00:00Z',false,false),
-  ev('f1-miami-2026','f1','Miami GP','Round 7','🏎️','🏁','#FF1801','#00D2BE',
-    'hardrock','2026-05-10T19:00:00Z',false,true),
-  ev('f1-monaco-2026','f1','Monaco GP','Round 8','🏎️','🏁','#FF1801','#00D2BE',
-    'monaco','2026-05-24T13:00:00Z',false,true),
-  // ── IPL 2026 ──────────────────────────────────────────────────────────────
-  ev('ipl-rcb-mi','cricket','Royal Challengers','Mumbai Indians','🏏','🏏','#D11D1D','#004BA0',
-    'nassau','2026-03-28T14:00:00Z',true,true),
-  ev('ipl-csk-kkr','cricket','Chennai Super Kings','Kolkata Knight Riders','🏏','🏏','#FFFF00','#522D80',
-    'nassau','2026-04-04T14:00:00Z',true,true),
-  ev('ipl-final-2026','cricket','IPL Final 2026','TBD','🏏','🏆','#FF6B00','#FFD700',
-    'nassau','2026-05-25T14:00:00Z',false,true),
-  // ── NBA Playoffs 2026 ─────────────────────────────────────────────────────
-  ev('nba-playoffs-2026','nba','NBA Playoffs','2026','🏀','🏆','#EA580C','#000',
-    'sofi','2026-04-18T23:00:00Z',false,true),
-  ev('nba-finals-2026','nba','NBA Finals','Game 1','🏀','🏆','#EA580C','#000',
-    'sofi','2026-06-05T23:00:00Z',false,true),
-  // ── Champions League ──────────────────────────────────────────────────────
-  ev('ucl-qf-leg1','soccer','Champions League','Quarter Finals','⚽','🏆','#001D6E','#FFD700',
-    'metlife','2026-04-07T19:00:00Z',false,true),
-  ev('ucl-sf-leg1','soccer','Champions League','Semi Finals','⚽','🏆','#001D6E','#FFD700',
-    'metlife','2026-04-28T19:00:00Z',false,true),
-  ev('ucl-final-2026','soccer','Champions League','Final - München','⚽','🏆','#001D6E','#FFD700',
-    'attdallas','2026-05-30T19:00:00Z',false,true),
-  // ── Wimbledon 2026 ────────────────────────────────────────────────────────
-  ev('wimbledon-2026','f1','Wimbledon','2026','🎾','🏆','#006400','#F0F0F0',
-    'monaco','2026-06-29T11:00:00Z',false,true),
-]
-
-// Today's date for filtering
-const TODAY = new Date('2026-03-19T00:00:00Z')
-
-export function getUpcomingEvents(sportId?: string, limit = 40): FanGlobeEvent[] {
-  const all = [...UPCOMING_SPORTS_EVENTS, ...WC2026_EVENTS]
-    .filter(e => new Date(e.kickoffAt) >= TODAY)
-    .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
-
-  if (sportId) return all.filter(e => e.sportId === sportId).slice(0, limit)
-  return all.slice(0, limit)
-}
-
-export function getUpcomingFeatured(limit = 16): FanGlobeEvent[] {
-  return getUpcomingEvents().filter(e => e.isFeatured).slice(0, limit)
-}
-
-export function getEventsBySport(): Record<string, FanGlobeEvent[]> {
-  const all = getUpcomingEvents()
-  return all.reduce((acc, e) => {
-    if (!acc[e.sportId]) acc[e.sportId] = []
-    acc[e.sportId].push(e)
-    return acc
-  }, {} as Record<string, FanGlobeEvent[]>)
 }

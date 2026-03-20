@@ -18,11 +18,21 @@ export async function GET(
   // ── 1. Redis cache hit → return immediately, 1 read, done ──────────────
   const cached = await getCachedSnapshot(eventId)
   if (cached) {
-    return new NextResponse(cached, {
+    // If cached snapshot predates FAS, compute and inject it now
+    let body = cached
+    try {
+      const parsed = JSON.parse(cached)
+      if (!parsed.fas && parsed.totalCount !== undefined) {
+        const fasResult = fasFromSnapshot(parsed, parsed.sportId)
+        parsed.fas = { score: fasResult.score, label: fasResult.label, color: fasResult.color }
+        body = JSON.stringify(parsed)
+        // Update cache with fas included
+        await setCachedSnapshot(eventId, body)
+      }
+    } catch {}
+    return new NextResponse(body, {
       headers: {
         'Content-Type': 'application/json',
-        // CDN: serve for 60s, stale-while-revalidate for 2min
-        // Client: browser caches for 30s (aligns with poll interval)
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
         'X-Cache': 'HIT',
       },

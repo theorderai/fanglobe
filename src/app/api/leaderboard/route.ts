@@ -5,7 +5,7 @@ import { fasFromSnapshot } from '@/lib/fas'
 import { SPORTS } from '@/types'
 
 export const runtime = 'nodejs'
-export const revalidate = 60
+export const revalidate = 0  // manual cache control
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       cities: sorted,
     }, targetEvent.sport_id)
 
-    return NextResponse.json({
+    const responseData = {
       cities: sorted,
       totalFans,
       countryCount,
@@ -115,9 +115,12 @@ export async function GET(req: NextRequest) {
         homeFlag: e.home_flag, awayFlag: e.away_flag,
         kickoffAt: e.kickoff_at,
       })),
+    }
+    return NextResponse.json(responseData, {
+      headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300' }
     })
   } catch (err) {
     console.error('leaderboard error:', err)
-    return NextResponse.json({ cities: [], events: [], fas: null }, { status: 500 })
+    return NextResponse.json({ cities:[], events:[], fas:null }, { status: 500 })
   }
 }
