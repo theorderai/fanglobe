@@ -2,88 +2,86 @@
 import type { CityData, FanGlobeEvent, Cheer } from '@/types'
 
 interface Props {
-  city: CityData
-  event: FanGlobeEvent
-  cheers: Cheer[]
-  rank: number
-  onClose: () => void
-  accentColor: string
+  city: CityData; event: FanGlobeEvent; cheers: Cheer[]
+  rank: number; onClose: () => void; accentColor: string
+}
+
+function fmtFans(n: number) {
+  if (n>=1_000_000) return `${(n/1_000_000).toFixed(1)}M`
+  if (n>=1_000) return `${Math.round(n/1000)}K`
+  return String(n)
 }
 
 export default function CityPopup({ city, event, cheers, rank, onClose, accentColor }: Props) {
   const cityCheers = cheers.filter(c => c.city === city.city).slice(0, 3)
-  const pct = event.isRivalry
-    ? city.homeCount !== undefined
-      ? Math.round((city.homeCount / Math.max(1, city.count)) * 100)
-      : null
+  const homeColor = event.homeColor ?? '#39ff76'
+  const awayColor = event.awayColor ?? '#00d4ff'
+  const homePct = event.isRivalry && city.homeCount !== undefined
+    ? Math.round((city.homeCount / Math.max(1, city.count)) * 100)
     : null
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 50, pointerEvents: 'none',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
+    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)' }}
+      onClick={e => { if (e.target===e.currentTarget) onClose() }}>
       <div style={{
-        background: 'rgba(4,5,8,0.95)',
-        border: `1px solid ${accentColor.replace('1)', '0.3)')}`,
-        borderRadius: 18, padding: 20, width: 260,
-        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: `0 0 40px ${accentColor.replace('1)', '0.15)')}, 0 24px 60px rgba(0,0,0,0.7)`,
-        pointerEvents: 'auto',
-        animation: 'fadeInUp 0.25s cubic-bezier(0.16,1,0.3,1)',
+        background:'#0d0d14', border:`2px solid ${accentColor.replace('1)','0.35)')}`,
+        borderRadius:20, padding:'28px 24px', width:'100%', maxWidth:340,
+        boxShadow:`0 0 60px ${accentColor.replace('1)','0.15)')}, 0 24px 60px rgba(0,0,0,0.8)`,
+        animation:'popIn 0.25s cubic-bezier(0.16,1,0.3,1)',
       }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 28 }}>{city.flag}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', fontFamily: "'Syne', sans-serif" }}>{city.city}</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: "'JetBrains Mono', monospace" }}>#{rank} globally</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 26, height: 26, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        {/* Close */}
+        <button onClick={onClose} style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,0.08)', border:'none', borderRadius:'50%', width:30, height:30, cursor:'pointer', color:'rgba(255,255,255,0.5)', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+
+        {/* Flag + city */}
+        <div style={{ textAlign:'center', marginBottom:20 }}>
+          <div style={{ fontSize:52, marginBottom:10 }}>{city.flag}</div>
+          <div style={{ fontSize:24, fontWeight:800, color:'#fff', fontFamily:"'Syne',sans-serif", marginBottom:4 }}>{city.city}</div>
+          <div style={{ fontSize:13, color:'rgba(255,255,255,0.35)', fontFamily:"'JetBrains Mono',monospace" }}>#{rank} globally</div>
         </div>
 
         {/* Fan count */}
-        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
-          <div style={{ fontSize: 32, fontWeight: 800, color: accentColor, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>
-            {city.count.toLocaleString()}
+        <div style={{ textAlign:'center', marginBottom:20 }}>
+          <div style={{ fontSize:48, fontWeight:800, color:accentColor, fontFamily:"'JetBrains Mono',monospace", lineHeight:1, textShadow:`0 0 30px ${accentColor.replace('1)','0.4)')}` }}>
+            {fmtFans(city.count)}
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 2, letterSpacing: '1px' }}>fans watching</div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', letterSpacing:'2px', textTransform:'uppercase', fontFamily:"'JetBrains Mono',monospace", marginTop:4 }}>fans watching</div>
         </div>
 
-        {/* Rivalry split for this city */}
-        {pct !== null && event.homeColor && event.awayColor && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, color: event.homeColor, fontWeight: 700 }}>{event.homeFlag} {pct}%</span>
-              <span style={{ fontSize: 11, color: event.awayColor, fontWeight: 700 }}>{100 - pct}% {event.awayFlag}</span>
+        {/* Rivalry split */}
+        {homePct !== null && (
+          <div style={{ marginBottom:20 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+              <span style={{ fontSize:14, fontWeight:700, color:homeColor, display:'flex', alignItems:'center', gap:6 }}>
+                <span style={{ fontSize:18 }}>{event.homeFlag}</span> {homePct}%
+              </span>
+              <span style={{ fontSize:14, fontWeight:700, color:awayColor, display:'flex', alignItems:'center', gap:6 }}>
+                {100-homePct}% <span style={{ fontSize:18 }}>{event.awayFlag}</span>
+              </span>
             </div>
-            <div style={{ height: 4, borderRadius: 100, overflow: 'hidden', display: 'flex', gap: 1 }}>
-              <div style={{ width: `${pct}%`, background: event.homeColor, borderRadius: 100 }} />
-              <div style={{ width: `${100 - pct}%`, background: event.awayColor, borderRadius: 100 }} />
+            <div style={{ height:8, borderRadius:100, overflow:'hidden', display:'flex', gap:2 }}>
+              <div style={{ width:`${homePct}%`, background:homeColor, borderRadius:100, transition:'width 0.6s ease' }} />
+              <div style={{ width:`${100-homePct}%`, background:awayColor, borderRadius:100, transition:'width 0.6s ease' }} />
             </div>
           </div>
         )}
 
         {/* Local cheers */}
-        {cityCheers.length > 0 && (
-          <div>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
-              Local cheers
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.25)', letterSpacing:'2px', textTransform:'uppercase', fontFamily:"'JetBrains Mono',monospace", marginBottom:10 }}>
+            Local Cheers
+          </div>
+          {cityCheers.length > 0 ? cityCheers.map((c, i) => (
+            <div key={c.id} style={{ background:'rgba(255,255,255,0.04)', borderRadius:10, padding:'10px 12px', marginBottom:i<cityCheers.length-1?6:0, fontSize:13, color:'rgba(255,255,255,0.75)', lineHeight:1.4, fontFamily:"'Syne',sans-serif" }}>
+              {c.text}
             </div>
-            {cityCheers.map(c => (
-              <div key={c.id} style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', lineHeight: 1.4 }}>
-                "{c.text}"
-              </div>
-            ))}
-          </div>
-        )}
-
-        {cityCheers.length === 0 && (
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textAlign: 'center', padding: '8px 0', fontStyle: 'italic' }}>
-            No cheers from {city.city} yet
-          </div>
-        )}
+          )) : (
+            <div style={{ fontSize:13, color:'rgba(255,255,255,0.2)', fontStyle:'italic', textAlign:'center', padding:'8px 0' }}>
+              No cheers from {city.city} yet
+            </div>
+          )}
+        </div>
       </div>
+      <style>{`@keyframes popIn { from { transform:scale(0.9); opacity:0; } to { transform:scale(1); opacity:1; } }`}</style>
     </div>
   )
 }

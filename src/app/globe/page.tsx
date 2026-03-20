@@ -39,15 +39,17 @@ function KickoffBadge({ kickoffAt, venue, homeTeam, awayTeam, homeFlag, awayFlag
   const countdown = useCountdown(kickoffAt)
   const isLive = countdown === 'LIVE'
   return (
-    <div style={{ position:'fixed',top:76,right:16,zIndex:20,background:'rgba(4,5,8,0.92)',border:`1px solid ${isLive?accentColor.replace('1)','0.4)'):'rgba(255,255,255,0.08)'}`,borderRadius:14,padding:'10px 14px',textAlign:'right',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',minWidth:160 }}>
-      <div style={{ fontSize:9,color:'rgba(255,255,255,0.28)',marginBottom:5,fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px',textTransform:'uppercase' }}>{venue}</div>
-      <div style={{ display:'flex',alignItems:'center',justifyContent:'flex-end',gap:6,marginBottom:6 }}>
-        <span style={{ fontSize:11,fontWeight:700,color:homeColor??'#fff' }}>{homeFlag} {homeTeam.split(' ').slice(-1)[0]}</span>
-        <span style={{ fontSize:9,color:'rgba(255,255,255,0.25)' }}>vs</span>
-        <span style={{ fontSize:11,fontWeight:700,color:awayColor??'#fff' }}>{awayTeam.split(' ').slice(-1)[0]} {awayFlag}</span>
+    <div style={{ display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2,flexShrink:0 }}>
+      <div style={{ fontSize:9,color:'rgba(255,255,255,0.25)',fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px',textTransform:'uppercase' }}>{venue}</div>
+      <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+        <span style={{ fontSize:13,fontWeight:700,color:homeColor??'#fff' }}>{homeFlag}</span>
+        <span style={{ fontSize:10,fontWeight:700,color:homeColor??'#fff',fontFamily:"'Syne',sans-serif" }}>{homeTeam.split(' ').slice(-1)[0]}</span>
+        <span style={{ fontSize:10,fontWeight:800,letterSpacing:1.5,color:isLive?'#dc2626':accentColor,fontFamily:"'JetBrains Mono',monospace",padding:'2px 6px',background:isLive?'rgba(220,38,38,0.12)':'rgba(255,255,255,0.06)',borderRadius:6 }}>
+          {isLive ? '● LIVE' : countdown}
+        </span>
+        <span style={{ fontSize:10,fontWeight:700,color:awayColor??'#fff',fontFamily:"'Syne',sans-serif" }}>{awayTeam.split(' ').slice(-1)[0]}</span>
+        <span style={{ fontSize:13,fontWeight:700,color:awayColor??'#fff' }}>{awayFlag}</span>
       </div>
-      <div style={{ fontSize:20,fontWeight:700,letterSpacing:2,color:isLive?accentColor:'#fff',fontFamily:"'JetBrains Mono',monospace" }}>{countdown}</div>
-      <div style={{ fontSize:9,color:'rgba(255,255,255,0.22)',letterSpacing:'1.5px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace" }}>{isLive?'match in progress':'to kickoff'}</div>
     </div>
   )
 }
@@ -251,6 +253,7 @@ export default function GlobePage() {
         events={events} activeEvent={activeEvent} snapshot={snapshot}
         cheers={cheers} snapshots={snapshots}
         onSwitchEvent={handleSwitchEvent} accentColor={accentColor}
+        activeSport={activeSport} onSwitchSport={switchSport}
       />
     )
   }
@@ -258,43 +261,63 @@ export default function GlobePage() {
   // ── DESKTOP LAYOUT ──────────────────────────────────────────────────────────
   return (
     <>
-      <div style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:1,backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.02) 2px,rgba(0,0,0,0.02) 4px)' }} />
-      <div style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:2,background:'radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.82) 100%)' }} />
+      <div style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:2,background:'radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.85) 100%)' }} />
       <div style={{ position:'absolute',inset:0 }}>
         <GlobeComponent match={activeEvent} cities={cities} userPin={userPin} newCheckinPos={newCheckinPos} onCityClick={(city) => setSelectedCity(city)} momentWave={momentWave} />
       </div>
-      <LiveStatsTicker snapshot={snapshot} event={activeEvent} accentColor={accentColor} />
-      <div style={{ position:'fixed',top:18,left:20,zIndex:20,display:'flex',alignItems:'center',gap:8 }}>
-        <div style={{ width:30,height:30,borderRadius:8,background:accentColor,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,transition:'background 0.5s',boxShadow:`0 0 14px ${accentColor.replace('1)','0.4)')}` }}>{sport?.emoji??'🌍'}</div>
-        <div style={{ fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.55)',fontFamily:"'Syne',sans-serif" }}>fanglobe<span style={{ color:accentColor }}>.live</span></div>
-        <a href="/passport" style={{ marginLeft:6,fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.3)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",letterSpacing:'0.5px',border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'2px 8px' }}>🎫 Passport</a>
+
+      {/* Top bar — consistent with mobile */}
+      <div style={{ position:'fixed',top:0,left:0,right:0,zIndex:20,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'0 20px' }}>
+        <div style={{ display:'flex',alignItems:'center',height:52,gap:12 }}>
+          {/* Logo */}
+          <div style={{ display:'flex',alignItems:'center',gap:8,flexShrink:0 }}>
+            <div style={{ width:28,height:28,borderRadius:7,background:accentColor,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,boxShadow:`0 0 12px ${accentColor.replace('1)','0.4)')}` }}>{sport?.emoji??'🌍'}</div>
+            <div style={{ fontSize:13,fontWeight:800,color:'rgba(255,255,255,0.9)',fontFamily:"'Syne',sans-serif" }}>fanglobe<span style={{ color:accentColor }}>.live</span></div>
+            <a href="/passport" style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.3)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",letterSpacing:'0.5px',border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',marginLeft:4 }}>🎫 Passport</a>
+          </div>
+          {/* Sport switcher — center */}
+          <div style={{ flex:1,display:'flex',justifyContent:'center' }}>
+            <SportEventSwitcher events={events} activeEvents={activeEvents} activeSport={activeSport} activeEventId={activeEvent?.slug??effectiveEventId} onSelect={handleSwitchEvent} onSwitchSport={switchSport} />
+          </div>
+          {/* Kickoff pill — right */}
+          <KickoffBadge kickoffAt={activeEvent.kickoffAt} venue={activeEvent.venueShort} homeTeam={activeEvent.homeTeam} awayTeam={activeEvent.awayTeam} homeFlag={activeEvent.homeFlag} awayFlag={activeEvent.awayFlag} homeColor={activeEvent.homeColor} awayColor={activeEvent.awayColor} accentColor={accentColor} />
+        </div>
       </div>
-      <SportEventSwitcher events={events} activeEvents={activeEvents} activeSport={activeSport} activeEventId={effectiveEventId} onSelect={handleSwitchEvent} onSwitchSport={switchSport} />
-      <KickoffBadge kickoffAt={activeEvent.kickoffAt} venue={activeEvent.venueShort} homeTeam={activeEvent.homeTeam} awayTeam={activeEvent.awayTeam} homeFlag={activeEvent.homeFlag} awayFlag={activeEvent.awayFlag} homeColor={activeEvent.homeColor} awayColor={activeEvent.awayColor} accentColor={accentColor} />
-      {snapshot && activeEvent.isRivalry && <RivalrySplit event={activeEvent} snapshot={snapshot} />}
-      <CompactLeaderboard cities={cities} total={total} countryCount={countryCount} accentColor={accentColor} />
+
+      {/* Left: Live cheers */}
       <CompactCheerFeed cheers={cheers} sessionId={auth.user?.id??''} matchId={effectiveEventId} accentColor={accentColor} />
-      <div style={{ position:'fixed',bottom:232,right:20,zIndex:20 }} onClick={triggerMomentWave}>
+
+      {/* Right: Top cities + rivalry split */}
+      <div style={{ position:'fixed',right:16,top:68,zIndex:20,display:'flex',flexDirection:'column',gap:10 }}>
+        {snapshot && activeEvent.isRivalry && <RivalrySplit event={activeEvent} snapshot={snapshot} />}
+        <CompactLeaderboard cities={cities} total={total} countryCount={countryCount} accentColor={accentColor} />
+      </div>
+
+      {/* Moment pulse button */}
+      <div style={{ position:'fixed',bottom:220,right:20,zIndex:20 }} onClick={triggerMomentWave}>
         <MomentPulse event={activeEvent} accessToken={auth.accessToken} />
       </div>
-      <div style={{ position:'fixed',bottom:260,left:'50%',transform:'translateX(-50%)',textAlign:'center',zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:6 }}>
-        <div style={{ display:'flex',gap:14 }}>
-          <div style={{ fontSize:10,color:'rgba(255,255,255,0.28)',fontFamily:"'JetBrains Mono',monospace",display:'flex',alignItems:'center',gap:4 }}><div style={{ width:4,height:4,borderRadius:'50%',background:accentColor,animation:'pip 2s infinite' }} />{countryCount} countries</div>
-          <div style={{ fontSize:10,color:'rgba(255,255,255,0.28)',fontFamily:"'JetBrains Mono',monospace",display:'flex',alignItems:'center',gap:4 }}><div style={{ width:4,height:4,borderRadius:'50%',background:accentColor,animation:'pip 2s infinite 0.7s' }} />live</div>
+
+      {/* Center: fan counter + CTA */}
+      <div style={{ position:'fixed',bottom:240,left:'50%',transform:'translateX(-50%)',textAlign:'center',zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',gap:5 }}>
+        <div style={{ fontSize:10,color:'rgba(255,255,255,0.28)',fontFamily:"'JetBrains Mono',monospace",display:'flex',gap:16 }}>
+          <span><span style={{ color:accentColor }}>● </span>{countryCount} countries</span>
+          <span><span style={{ color:accentColor }}>● </span>live</span>
         </div>
-        <div style={{ fontSize:56,fontWeight:800,letterSpacing:-3,lineHeight:1,fontVariantNumeric:'tabular-nums',fontFamily:"'JetBrains Mono',monospace",textShadow:`0 0 50px ${teamAccent.includes('rgba')?teamAccent.replace('1)','0.3)'):teamAccent+'55'}`,color:'#fff',transition:'text-shadow 0.5s' }}>{total.toLocaleString()}</div>
+        <div style={{ fontSize:60,fontWeight:800,letterSpacing:-3,lineHeight:1,fontFamily:"'JetBrains Mono',monospace",textShadow:`0 0 50px ${accentColor.replace('1)','0.25)')}`,color:'#fff' }}>{total.toLocaleString()}</div>
         <div style={{ fontSize:10,color:'rgba(255,255,255,0.25)',letterSpacing:'3px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace" }}>fans watching {activeEvent.homeTeam.split(' ').slice(-1)[0]}</div>
-        <div style={{ display:'flex',gap:8,marginTop:2 }}>
-          <button onClick={handleCheckin} disabled={checkinLoading||hasCheckedIn} style={{ background:hasCheckedIn?accentDim:accentColor,color:hasCheckedIn?accentColor:'#000',border:hasCheckedIn?`1px solid ${accentColor.replace('1)','0.3)')}`:'none',borderRadius:100,padding:'11px 22px',fontSize:13,fontWeight:800,fontFamily:"'Syne',sans-serif",cursor:(checkinLoading||hasCheckedIn)?'default':'pointer',display:'flex',alignItems:'center',gap:6,boxShadow:hasCheckedIn?'none':`0 0 32px ${accentColor.replace('1)','0.4)')}`,transition:'all 0.2s',opacity:checkinLoading?0.7:1,pointerEvents:(checkinLoading||hasCheckedIn)?'none':'auto' }}>
-            <span>{hasCheckedIn?'✓':auth.loading?'⏳':'📍'}</span>
-            {checkinLoading?'Locating...':hasCheckedIn?"You're on the globe":auth.loading?'Loading...':'Drop my pin'}
+        <div style={{ display:'flex',gap:8,marginTop:4 }}>
+          <button onClick={handleCheckin} disabled={checkinLoading||hasCheckedIn} style={{ background:hasCheckedIn?accentDim:accentColor,color:hasCheckedIn?accentColor:'#000',border:hasCheckedIn?`1px solid ${accentColor.replace('1)','0.3)')}`:'none',borderRadius:100,padding:'12px 24px',fontSize:14,fontWeight:800,fontFamily:"'Syne',sans-serif",cursor:(checkinLoading||hasCheckedIn)?'default':'pointer',boxShadow:hasCheckedIn?'none':`0 0 32px ${accentColor.replace('1)','0.4)')}`,transition:'all 0.2s' }}>
+            {checkinLoading?'📍 Locating...':hasCheckedIn?`✓ You're on the globe`:auth.loading?'Loading...':'📍 Drop my pin'}
           </button>
-          {hasCheckedIn && <button onClick={() => setShowShareCard(true)} style={{ background:'transparent',border:`1px solid ${accentColor.replace('1)','0.3)')}`,borderRadius:100,padding:'11px 16px',fontSize:13,fontWeight:700,color:accentColor,cursor:'pointer',fontFamily:"'Syne',sans-serif" }}>Share 🎴</button>}
+          {hasCheckedIn && <button onClick={() => setShowShareCard(true)} style={{ background:'transparent',border:`1px solid ${accentColor.replace('1)','0.3)')}`,borderRadius:100,padding:'12px 18px',fontSize:13,fontWeight:700,color:accentColor,cursor:'pointer',fontFamily:"'Syne',sans-serif" }}>Share 🎴</button>}
         </div>
       </div>
-      <MatchBrowser events={events} activeEventId={effectiveEventId} onSelect={handleSwitchEvent} snapshots={snapshots} />
+
       <PulseBar pulse={pulse} matchLabel={activeEvent.label} sessionId={auth.user?.id??''} matchId={effectiveEventId} sport={sport} accessToken={auth.accessToken} />
-      {toast && <div style={{ position:'fixed',top:74,left:'50%',transform:'translateX(-50%)',background:accentColor,color:'#000',fontSize:12,fontWeight:800,fontFamily:"'Syne',sans-serif",padding:'8px 20px',borderRadius:100,zIndex:30,pointerEvents:'none',whiteSpace:'nowrap',animation:'fadeInUp 0.2s ease' }}>{toast}</div>}
+      <MatchBrowser events={events} activeEventId={activeEvent?.slug??effectiveEventId} onSelect={handleSwitchEvent} snapshots={snapshots} />
+
+      {toast && <div style={{ position:'fixed',top:62,left:'50%',transform:'translateX(-50%)',background:accentColor,color:'#000',fontSize:12,fontWeight:800,fontFamily:"'Syne',sans-serif",padding:'8px 20px',borderRadius:100,zIndex:30,pointerEvents:'none',whiteSpace:'nowrap',animation:'fadeInUp 0.2s ease' }}>{toast}</div>}
       {showOnboarding && <OnboardingOverlay onDone={() => setShowOnboarding(false)} />}
       {showPickSide && activeEvent && <PickYourSide event={activeEvent} onPick={handlePickSide} />}
       {showShareCard && snapshot && <ShareCard event={activeEvent} snapshot={snapshot} userCity={userCity} userRank={userRank} onClose={() => setShowShareCard(false)} />}

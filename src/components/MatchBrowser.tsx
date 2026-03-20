@@ -1,13 +1,9 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { FanGlobeEvent } from '@/types'
 
-interface MatchSnapshot {
-  totalCount: number
-  pulse: { fire: number; ecstatic: number; nervous: number; crushed: number; moment: number }
-}
-
+interface MatchSnapshot { totalCount: number; pulse: { fire:number;ecstatic:number;nervous:number;crushed:number;moment:number } }
 interface Props {
   events: FanGlobeEvent[]
   activeEventId: string
@@ -16,7 +12,6 @@ interface Props {
   mobileInline?: boolean
 }
 
-// ── Date strip helpers ──────────────────────────────────────────────────────
 function getEventDates(events: FanGlobeEvent[]): Date[] {
   const seen = new Set<string>()
   const dates: Date[] = []
@@ -29,311 +24,211 @@ function getEventDates(events: FanGlobeEvent[]): Date[] {
 }
 
 function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate()
 }
 
-function formatDayLabel(d: Date): { top: string; bot: string } {
+function formatDayLabel(d: Date) {
   const now = new Date()
-  if (isSameDay(d, now)) return { top: 'Today', bot: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
-  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
-  if (isSameDay(d, tomorrow)) return { top: 'Tomorrow', bot: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
-  return {
-    top: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-    bot: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-  }
+  if (isSameDay(d, now)) return { top: 'TODAY', bot: '' }
+  const diff = Math.ceil((d.getTime() - now.getTime()) / 86400000)
+  if (diff <= 7) return { top: d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase(), bot: d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) }
+  return { top: d.toLocaleDateString('en-US',{month:'short',day:'numeric'}), bot: '' }
 }
 
-// ── Vibe badge ──────────────────────────────────────────────────────────────
-function vibeBadge(pulse?: MatchSnapshot['pulse']): { emoji: string; label: string } | null {
-  if (!pulse) return null
-  const total = Object.values(pulse).reduce((a, b) => a + b, 0)
-  if (total < 10) return null
-  const top = Object.entries(pulse).sort((a, b) => b[1] - a[1])[0]
-  const map: Record<string, { emoji: string; label: string }> = {
-    fire:     { emoji: '🔥', label: 'Pumped' },
-    ecstatic: { emoji: '🎉', label: 'Ecstatic' },
-    nervous:  { emoji: '😰', label: 'Nervous' },
-    crushed:  { emoji: '💀', label: 'Gutted' },
-    moment:   { emoji: '⚡', label: 'Buzzing' },
-  }
-  return map[top[0]] ?? null
-}
-
-function fmtFans(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K`
+function fmtFans(n: number) {
+  if (n>=1_000_000) return `${(n/1_000_000).toFixed(1)}M`
+  if (n>=1_000) return `${Math.round(n/1000)}K`
   return String(n)
 }
 
-// ── Single match card ───────────────────────────────────────────────────────
-function MatchCard({ event, active, snap, onSelect }: {
-  event: FanGlobeEvent; active: boolean; snap?: MatchSnapshot; onSelect: () => void
-}) {
+function MatchCard({ event, active, snap, onSelect }: { event: FanGlobeEvent; active: boolean; snap?: MatchSnapshot; onSelect: () => void }) {
   const countdown = useCountdown(event.kickoffAt)
   const isLive = countdown === 'LIVE'
+  const fans = snap?.totalCount ?? 0
   const { SPORTS } = require('@/types')
   const sport = event.sport ?? SPORTS[event.sportId]
-  const accent = sport?.arcColor ? sport.arcColor + '1)' : 'rgba(57,255,118,1)'
-  const vibe = vibeBadge(snap?.pulse)
-  const fans = snap?.totalCount ?? 0
+  const accent = sport?.arcColor ? sport.arcColor+'1)' : 'rgba(57,255,118,1)'
 
-  const kickoffTime = new Date(event.kickoffAt).toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
-  })
+  const kickoffStr = new Date(event.kickoffAt).toLocaleDateString('en-US',{ month:'short', day:'numeric' }) + ' · ' +
+    new Date(event.kickoffAt).toLocaleTimeString('en-US',{ hour:'numeric', minute:'2-digit', timeZoneName:'short' })
 
   return (
     <button onClick={onSelect} style={{
-      width: '100%', background: active ? 'rgba(255,255,255,0.06)' : 'rgba(4,5,8,0.7)',
-      border: `1px solid ${active ? accent.replace('1)', '0.35)') : 'rgba(255,255,255,0.08)'}`,
-      borderRadius: 14, padding: '12px 14px', cursor: 'pointer',
-      display: 'flex', alignItems: 'center', gap: 12,
-      textAlign: 'left', transition: 'all 0.15s ease',
-      boxShadow: active ? `0 0 0 1px ${accent.replace('1)', '0.2)')}` : 'none',
+      width:'100%', background: active ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
+      border:`1px solid ${active ? accent.replace('1)','0.3)') : 'rgba(255,255,255,0.07)'}`,
+      borderRadius:14, padding:'14px 16px', cursor:'pointer',
+      display:'flex', alignItems:'center', gap:12, textAlign:'left',
+      transition:'all 0.15s',
     }}>
-      {/* Live / upcoming indicator */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0, width: 32 }}>
+      {/* Left: live dot */}
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2, flexShrink:0, width:8 }}>
+        <div style={{ width:8, height:8, borderRadius:'50%', background: isLive ? '#dc2626' : 'rgba(255,255,255,0.2)', boxShadow: isLive ? '0 0 6px #dc2626' : 'none' }} />
+      </div>
+
+      {/* Center: teams stacked */}
+      <div style={{ flex:1, minWidth:0 }}>
         {isLive ? (
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', boxShadow: '0 0 6px #dc2626' }} />
+          <div style={{ fontSize:10, color:'#dc2626', fontWeight:700, marginBottom:6, display:'flex', alignItems:'center', gap:4, fontFamily:"'JetBrains Mono',monospace" }}>
+            <span style={{ width:5,height:5,borderRadius:'50%',background:'#dc2626',display:'inline-block' }} />
+            LIVE · {event.venueShort}
+          </div>
         ) : (
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
+          <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:6, fontFamily:"'JetBrains Mono',monospace" }}>
+            {kickoffStr} · {event.venueShort}
+          </div>
         )}
-        <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: isLive ? '#dc2626' : 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.5px' }}>
-          {isLive ? 'LIVE' : ''}
-        </span>
-      </div>
-
-      {/* Teams */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginBottom: 5, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.5px' }}>
-          {isLive ? `🔴 LIVE · ${event.venueShort}` : `${kickoffTime} · ${event.venueShort}`}
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+          <span style={{ fontSize:20 }}>{event.homeFlag}</span>
+          <span style={{ fontSize:14, fontWeight:700, color: event.homeColor ?? '#fff', fontFamily:"'Syne',sans-serif" }}>{event.homeTeam}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-          <span style={{ fontSize: 18 }}>{event.homeFlag}</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: event.homeColor ?? '#fff', fontFamily: "'Syne', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {event.homeTeam}
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 18 }}>{event.awayFlag}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: event.awayColor ? event.awayColor + 'cc' : 'rgba(255,255,255,0.6)', fontFamily: "'Syne', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {event.awayTeam}
-          </span>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:20 }}>{event.awayFlag}</span>
+          <span style={{ fontSize:14, fontWeight:600, color: event.awayColor ? event.awayColor+'cc' : 'rgba(255,255,255,0.6)', fontFamily:"'Syne',sans-serif" }}>{event.awayTeam}</span>
         </div>
       </div>
 
-      {/* Right: fan count + vibe */}
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        {fans > 0 ? (
+      {/* Right: fans + badges */}
+      <div style={{ textAlign:'right', flexShrink:0 }}>
+        {fans > 0 && (
           <>
-            <div style={{ fontSize: 18, fontWeight: 800, color: active ? accent : '#fff', fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>
-              {fmtFans(fans)}
-            </div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, letterSpacing: '0.5px' }}>fans watching</div>
+            <div style={{ fontSize:22, fontWeight:800, color: isLive ? accent : '#fff', fontFamily:"'JetBrains Mono',monospace", lineHeight:1 }}>{fmtFans(fans)}</div>
+            <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', marginTop:2, letterSpacing:'0.5px' }}>fans watching</div>
           </>
-        ) : (
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>
-            {countdown}
-          </div>
         )}
-        {vibe && (
-          <div style={{ marginTop: 5, fontSize: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 100, padding: '2px 7px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-            {vibe.emoji} <span style={{ color: 'rgba(255,255,255,0.5)' }}>{vibe.label}</span>
-          </div>
+        {!fans && !isLive && (
+          <div style={{ fontSize:12, color:'rgba(255,255,255,0.2)', fontFamily:"'JetBrains Mono',monospace" }}>{countdown}</div>
         )}
         {event.isRivalry && (
-          <div style={{ marginTop: 4, fontSize: 9, color: '#ff6b35', fontWeight: 700, letterSpacing: '0.5px' }}>⚔️ RIVALRY</div>
+          <div style={{ marginTop:6, background:'rgba(234,88,12,0.15)', border:'1px solid rgba(234,88,12,0.3)', borderRadius:6, padding:'3px 8px', display:'inline-flex', alignItems:'center', gap:4, fontSize:10, color:'#EA580C', fontWeight:700 }}>
+            ⚔️ RIVALRY
+          </div>
         )}
       </div>
     </button>
   )
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
 export default function MatchBrowser({ events, activeEventId, onSelect, snapshots, mobileInline }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeSport, setActiveSport] = useState('soccer')
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date|null>(null)
 
-  const activeEvent = events.find(e => e.id === activeEventId) ?? events[0]
+  const activeEvent = events.find(e => (e.slug??e.id) === activeEventId) ?? events.find(e => e.id === activeEventId) ?? events[0]
   if (!activeEvent) return null
 
-  // Sport filter
   const sportEvents = useMemo(() => events.filter(e => e.sportId === activeSport), [events, activeSport])
   const dates = useMemo(() => getEventDates(sportEvents), [sportEvents])
 
-  // Auto-select first date
-  useEffect(() => {
-    if (dates.length > 0 && !selectedDate) setSelectedDate(dates[0])
-  }, [dates, selectedDate])
+  useEffect(() => { if (dates.length > 0 && !selectedDate) setSelectedDate(dates[0]) }, [dates])
 
-  // Filter events by selected date
   const dayEvents = useMemo(() => {
     if (!selectedDate) return sportEvents
     return sportEvents.filter(e => isSameDay(new Date(e.kickoffAt), selectedDate))
   }, [sportEvents, selectedDate])
 
-  // Live events across all sports
-  const liveCount = events.filter(e => {
-    const diff = new Date(e.kickoffAt).getTime() - Date.now()
-    return diff < 0 && diff > -120 * 60 * 1000 // started within 2 hours
-  }).length
+  const liveCount = events.filter(e => { const diff = new Date(e.kickoffAt).getTime() - Date.now(); return diff < 0 && diff > -7200000 }).length
+  const totalLiveFans = Object.values(snapshots).reduce((s, d) => s + (d.totalCount ?? 0), 0)
 
-  const availableSports = ['soccer', 'cricket', 'f1', 'nba'].filter(s => events.some(e => e.sportId === s))
-  const sportEmoji: Record<string, string> = { soccer: '⚽', cricket: '🏏', f1: '🏎️', nba: '🏀', nfl: '🏈' }
+  const availableSports = ['soccer','cricket','f1','nba'].filter(s => events.some(e => e.sportId === s))
+  const sportConfig: Record<string,{name:string;emoji:string}> = {
+    soccer:{name:'Football',emoji:'⚽'}, cricket:{name:'Cricket',emoji:'🏏'}, f1:{name:'Formula 1',emoji:'🏎️'}, nba:{name:'NBA',emoji:'🏀'}
+  }
 
-  const handleSelect = (id: string) => {
-    onSelect(id)
-    setIsOpen(false)
+  const handleSelect = useCallback((id: string) => { onSelect(id); setIsOpen(false) }, [onSelect])
+
+  // Inline icon for mobile pulse bar
+  if (mobileInline) {
+    return (
+      <>
+        <button onClick={() => setIsOpen(true)} style={{ background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, flexShrink:0, padding:'2px 4px' }}>
+          <span style={{ fontSize:14 }}>📅</span>
+          {liveCount > 0 && (
+            <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:10, color:'#dc2626', fontWeight:700, background:'rgba(220,38,38,0.12)', padding:'2px 6px', borderRadius:100 }}>
+              <span style={{ width:5,height:5,borderRadius:'50%',background:'#dc2626',display:'inline-block' }} />{liveCount}
+            </span>
+          )}
+        </button>
+        {isOpen && <MatchBrowserSheet events={events} activeEventId={activeEventId} onSelect={handleSelect} snapshots={snapshots} onClose={() => setIsOpen(false)} availableSports={availableSports} sportConfig={sportConfig} activeSport={activeSport} setActiveSport={(s) => { setActiveSport(s); setSelectedDate(null) }} dates={dates} selectedDate={selectedDate} setSelectedDate={setSelectedDate} dayEvents={dayEvents} liveCount={liveCount} totalLiveFans={totalLiveFans} />}
+      </>
+    )
   }
 
   return (
     <>
-      {/* Trigger tab — sits above pulse bar */}
-      <button onClick={() => setIsOpen(true)} style={mobileInline ? {
-        background: 'transparent', border: 'none',
-        borderRadius: 100, padding: '4px 8px',
-        display: 'flex', alignItems: 'center', gap: 5,
-        cursor: 'pointer', flexShrink: 0,
-        fontFamily: "'Syne', sans-serif",
-      } : {
-        position: 'fixed',
-        bottom: 260, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 25,
-        background: 'rgba(4,5,8,0.92)',
-        border: '1px solid rgba(255,255,255,0.18)',
-        borderRadius: 100,
-        padding: '8px 18px',
-        display: 'flex', alignItems: 'center', gap: 8,
-        cursor: 'pointer',
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        fontFamily: "'Syne', sans-serif",
-        boxShadow: '0 2px 20px rgba(0,0,0,0.6)',
-        whiteSpace: 'nowrap',
-      }}>
-        <span style={{ fontSize: mobileInline ? 14 : 13 }}>📅</span>
-        {!mobileInline && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>Match Schedule</span>}
-        {liveCount > 0 && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#dc2626', fontWeight: 700, background: 'rgba(220,38,38,0.12)', padding: '2px 6px', borderRadius: 100 }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
-            {liveCount}
-          </span>
-        )}
-        {!mobileInline && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>↑</span>}
+      <button onClick={() => setIsOpen(true)} style={{ position:'fixed', bottom:260, left:'50%', transform:'translateX(-50%)', zIndex:25, background:'rgba(4,5,8,0.92)', border:'1px solid rgba(255,255,255,0.16)', borderRadius:100, padding:'8px 18px', display:'flex', alignItems:'center', gap:8, cursor:'pointer', backdropFilter:'blur(20px)', fontFamily:"'Syne',sans-serif", boxShadow:'0 2px 20px rgba(0,0,0,0.6)', whiteSpace:'nowrap' }}>
+        <span style={{ fontSize:13 }}>📅</span>
+        <span style={{ fontSize:11, color:'rgba(255,255,255,0.7)', fontWeight:700 }}>Match Schedule</span>
+        {liveCount > 0 && <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:10, color:'#dc2626', fontWeight:700, background:'rgba(220,38,38,0.12)', padding:'2px 7px', borderRadius:100 }}><span style={{ width:5,height:5,borderRadius:'50%',background:'#dc2626',display:'inline-block' }} />{liveCount} live</span>}
+        <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)' }}>↑</span>
       </button>
-
-      {/* Slide-up panel */}
-      {isOpen && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 80,
-          background: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-        }} onClick={e => { if (e.target === e.currentTarget) setIsOpen(false) }}>
-          <div style={{
-            background: 'rgba(4,5,8,0.98)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '20px 20px 0 0',
-            maxHeight: '82vh', display: 'flex', flexDirection: 'column',
-            animation: 'slideUp 0.25s cubic-bezier(0.16,1,0.3,1)',
-          }}>
-            {/* Handle */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 100, background: 'rgba(255,255,255,0.15)' }} />
-            </div>
-
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 18px 12px' }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', fontFamily: "'Syne', sans-serif" }}>Match Schedule</div>
-                {liveCount > 0 && (
-                  <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
-                    {liveCount} match{liveCount > 1 ? 'es' : ''} live now · {Object.keys(snapshots).length > 0 ? fmtFans(Object.values(snapshots).reduce((a, b) => a + (b.totalCount ?? 0), 0)) : '—'} fans watching
-                  </div>
-                )}
-              </div>
-              <button onClick={() => setIsOpen(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-            </div>
-
-            {/* Sport tabs */}
-            <div style={{ display: 'flex', gap: 6, padding: '0 18px 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-              {availableSports.map(s => {
-                const isActive = s === activeSport
-                return (
-                  <button key={s} onClick={() => { setActiveSport(s); setSelectedDate(null) }} style={{
-                    display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
-                    borderRadius: 100, border: 'none', cursor: 'pointer', flexShrink: 0,
-                    background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
-                    color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
-                    fontFamily: "'Syne', sans-serif", fontSize: 12, fontWeight: 700,
-                    transition: 'all 0.15s',
-                  }}>
-                    <span style={{ fontSize: 14 }}>{sportEmoji[s]}</span>
-                    {s === 'soccer' ? 'Football' : s === 'f1' ? 'Formula 1' : s.toUpperCase()}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Date strip */}
-            <div style={{ display: 'flex', gap: 4, padding: '0 18px 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-              {dates.slice(0, 14).map(d => {
-                const isActive = selectedDate && isSameDay(d, selectedDate)
-                const lbl = formatDayLabel(d)
-                const hasLive = sportEvents.some(e => {
-                  const ed = new Date(e.kickoffAt)
-                  return isSameDay(ed, d) && Date.now() > ed.getTime()
-                })
-                return (
-                  <button key={d.toDateString()} onClick={() => setSelectedDate(d)} style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                    padding: '7px 10px', borderRadius: 10, border: 'none', cursor: 'pointer', flexShrink: 0,
-                    background: isActive ? '#fff' : 'rgba(255,255,255,0.06)',
-                    transition: 'all 0.15s', minWidth: 52, position: 'relative',
-                  }}>
-                    {hasLive && (
-                      <span style={{ position: 'absolute', top: 4, right: 4, width: 5, height: 5, borderRadius: '50%', background: '#dc2626' }} />
-                    )}
-                    <span style={{ fontSize: 9, fontWeight: 700, color: isActive ? '#000' : 'rgba(255,255,255,0.4)', letterSpacing: '0.5px' }}>
-                      {lbl.top}
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? '#000' : 'rgba(255,255,255,0.7)' }}>
-                      {lbl.bot}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Match list */}
-            <div style={{ overflowY: 'auto', padding: '0 14px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {dayEvents.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', padding: '32px 0', fontSize: 13, fontFamily: "'Syne', sans-serif" }}>
-                  No matches on this day
-                </div>
-              ) : (
-                dayEvents.map(ev => (
-                  <MatchCard
-                    key={ev.id} event={ev}
-                    active={ev.id === activeEventId}
-                    snap={snapshots[ev.id]}
-                    onSelect={() => handleSelect(ev.id)}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
+      {isOpen && <MatchBrowserSheet events={events} activeEventId={activeEventId} onSelect={handleSelect} snapshots={snapshots} onClose={() => setIsOpen(false)} availableSports={availableSports} sportConfig={sportConfig} activeSport={activeSport} setActiveSport={(s) => { setActiveSport(s); setSelectedDate(null) }} dates={dates} selectedDate={selectedDate} setSelectedDate={setSelectedDate} dayEvents={dayEvents} liveCount={liveCount} totalLiveFans={totalLiveFans} />}
     </>
+  )
+}
+
+function MatchBrowserSheet({ events, activeEventId, onSelect, snapshots, onClose, availableSports, sportConfig, activeSport, setActiveSport, dates, selectedDate, setSelectedDate, dayEvents, liveCount, totalLiveFans }: {
+  events: FanGlobeEvent[]; activeEventId: string; onSelect: (id:string)=>void; snapshots: Record<string,MatchSnapshot>; onClose:()=>void; availableSports:string[]; sportConfig:Record<string,{name:string;emoji:string}>; activeSport:string; setActiveSport:(s:string)=>void; dates:Date[]; selectedDate:Date|null; setSelectedDate:(d:Date)=>void; dayEvents:FanGlobeEvent[]; liveCount:number; totalLiveFans:number
+}) {
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:80, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', flexDirection:'column', justifyContent:'flex-end' }}
+      onClick={e => { if (e.target===e.currentTarget) onClose() }}>
+      <div style={{ background:'#0d0d14', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'20px 20px 0 0', maxHeight:'85vh', display:'flex', flexDirection:'column', animation:'slideUp 0.25s cubic-bezier(0.16,1,0.3,1)' }}>
+        {/* Handle */}
+        <div style={{ display:'flex', justifyContent:'center', padding:'12px 0 4px' }}>
+          <div style={{ width:40, height:4, borderRadius:100, background:'rgba(255,255,255,0.15)' }} />
+        </div>
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', padding:'8px 20px 12px' }}>
+          <div>
+            <div style={{ fontSize:22, fontWeight:800, color:'#fff', fontFamily:"'Syne',sans-serif" }}>Match Schedule</div>
+            {liveCount > 0 && (
+              <div style={{ fontSize:12, color:'#dc2626', fontWeight:700, marginTop:4, display:'flex', alignItems:'center', gap:6, fontFamily:"'JetBrains Mono',monospace" }}>
+                <span style={{ width:7,height:7,borderRadius:'50%',background:'#dc2626',display:'inline-block',boxShadow:'0 0 6px #dc2626' }} />
+                {liveCount} match{liveCount>1?'es':''} live now · {totalLiveFans > 0 ? `${(totalLiveFans/1000000).toFixed(1)}M` : '—'} fans watching
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:'50%', width:32, height:32, cursor:'pointer', color:'rgba(255,255,255,0.5)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
+        </div>
+        {/* Sport tabs */}
+        <div style={{ display:'flex', gap:6, padding:'0 20px 12px', overflowX:'auto', scrollbarWidth:'none' }}>
+          {availableSports.map(s => {
+            const isActive = s===activeSport
+            return (
+              <button key={s} onClick={() => setActiveSport(s)} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:100, border:'none', cursor:'pointer', flexShrink:0, background: isActive ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)', color: isActive ? '#fff' : 'rgba(255,255,255,0.45)', fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:700, transition:'all 0.15s' }}>
+                <span style={{ fontSize:16 }}>{sportConfig[s]?.emoji}</span>
+                {sportConfig[s]?.name}
+              </button>
+            )
+          })}
+        </div>
+        {/* Date strip */}
+        <div style={{ display:'flex', gap:6, padding:'0 20px 12px', overflowX:'auto', scrollbarWidth:'none' }}>
+          {dates.slice(0,14).map(d => {
+            const isActive = selectedDate && isSameDay(d, selectedDate)
+            const lbl = formatDayLabel(d)
+            const hasLive = events.some(e => e.sportId===activeSport && isSameDay(new Date(e.kickoffAt), d) && Date.now() > new Date(e.kickoffAt).getTime())
+            return (
+              <button key={d.toDateString()} onClick={() => setSelectedDate(d)} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:1, padding:'8px 12px', borderRadius:12, border:'none', cursor:'pointer', flexShrink:0, minWidth:56, background: isActive ? '#fff' : 'rgba(255,255,255,0.05)', position:'relative', transition:'all 0.15s' }}>
+                {hasLive && <span style={{ position:'absolute', top:5, right:5, width:5, height:5, borderRadius:'50%', background:'#dc2626' }} />}
+                <span style={{ fontSize:9, fontWeight:700, color: isActive ? '#000' : 'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>{lbl.top}</span>
+                {lbl.bot && <span style={{ fontSize:11, fontWeight:700, color: isActive ? '#000' : 'rgba(255,255,255,0.7)' }}>{lbl.bot}</span>}
+              </button>
+            )
+          })}
+        </div>
+        {/* Match list */}
+        <div style={{ overflowY:'auto', padding:'0 14px 24px', display:'flex', flexDirection:'column', gap:8 }}>
+          {dayEvents.length === 0 ? (
+            <div style={{ textAlign:'center', color:'rgba(255,255,255,0.25)', padding:'32px 0', fontSize:13, fontFamily:"'Syne',sans-serif" }}>No matches on this day</div>
+          ) : (
+            dayEvents.map(ev => (
+              <MatchCard key={ev.id} event={ev} active={(ev.slug??ev.id)===activeEventId || ev.id===activeEventId} snap={snapshots[ev.slug??ev.id] ?? snapshots[ev.id]} onSelect={() => onSelect(ev.slug??ev.id)} />
+            ))
+          )}
+        </div>
+      </div>
+      <style>{`@keyframes slideUp { from { transform:translateY(100%); opacity:0; } to { transform:translateY(0); opacity:1; } }`}</style>
+    </div>
   )
 }
