@@ -10,6 +10,9 @@ interface Props {
   onSelect: (id: string) => void
   snapshots: Record<string, MatchSnapshot>
   mobileInline?: boolean
+  autoOpen?: boolean          // open the sheet immediately
+  initialSport?: string       // pre-select this sport tab when opening
+  onAutoOpenHandled?: () => void  // reset parent's autoOpen trigger
 }
 
 function getEventDates(events: FanGlobeEvent[]): Date[] {
@@ -108,10 +111,19 @@ function MatchCard({ event, active, snap, onSelect }: { event: FanGlobeEvent; ac
   )
 }
 
-export default function MatchBrowser({ events, activeEventId, onSelect, snapshots, mobileInline }: Props) {
+export default function MatchBrowser({ events, activeEventId, onSelect, snapshots, mobileInline, autoOpen, initialSport, onAutoOpenHandled }: Props) {
   const [isOpen, setIsOpen] = useState(false)
-  const [activeSport, setActiveSport] = useState('soccer')
+  const [activeSport, setActiveSport] = useState(initialSport ?? 'soccer')
   const [selectedDate, setSelectedDate] = useState<Date|null>(null)
+
+  // Auto-open when parent requests (e.g. sport tab tapped on mobile)
+  useEffect(() => {
+    if (autoOpen) {
+      if (initialSport) { setActiveSport(initialSport); setSelectedDate(null) }
+      setIsOpen(true)
+      onAutoOpenHandled?.()
+    }
+  }, [autoOpen, initialSport])
 
   const activeEvent = events.find(e => (e.slug??e.id) === activeEventId) ?? events.find(e => e.id === activeEventId) ?? events[0]
   if (!activeEvent) return null

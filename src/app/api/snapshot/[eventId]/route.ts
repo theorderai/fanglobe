@@ -30,14 +30,16 @@ export async function GET(
   let event = allFallback.find(e => e.id === eventId)
   let seedCities: CityData[] = getEventSeedCities(eventId)
 
-  // If not found in fallback, fetch from DB (real UUID from Supabase)
+  // If not found in fallback, fetch from DB — try slug first, then UUID
   if (!event) {
     try {
       const supabase = createServiceClient()
+      // Try by slug first (frontend passes slug), then by UUID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId)
       const { data } = await supabase
         .from('events')
         .select('*')
-        .eq('id', eventId)
+        .eq(isUUID ? 'id' : 'slug', eventId)
         .single()
 
       if (data) {
