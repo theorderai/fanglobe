@@ -11,6 +11,13 @@ function fmt(n: number) {
   return String(n)
 }
 
+function fasColor(score: number) {
+  if (score >= 85) return '#ff6b35'
+  if (score >= 70) return '#39FF76'
+  if (score >= 45) return '#ffd166'
+  return 'rgba(255,255,255,0.5)'
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const matchSlug = searchParams.get('match') ?? ''
@@ -19,6 +26,56 @@ export async function GET(req: NextRequest) {
   const rank = parseInt(searchParams.get('rank') ?? '0') || 0
   const flag = searchParams.get('flag') ?? '📍'
   const count = parseInt(searchParams.get('count') ?? '0') || 0
+  const clutchId = searchParams.get('clutch')
+
+  if (clutchId) {
+    try {
+      const supabase = createServiceClient()
+      const { data: moment } = await supabase.from('clutch_moments').select('*').eq('short_id', clutchId).single()
+      if (moment) {
+        const { data: event } = await supabase.from('events').select('home_team, away_team, home_flag, away_flag').eq('slug', moment.match_id).single()
+        const color = fasColor(moment.fas_score)
+
+        return new ImageResponse(
+          <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#04050a', padding:'50px 60px', fontFamily:'sans-serif', position:'relative' }}>
+            <div style={{ position:'absolute', top:-250, left:'50%', width:1000, height:1000, borderRadius:'50%', background:`radial-gradient(circle, ${color}22 0%, transparent 60%)`, transform:'translateX(-50%)', display:'flex' }} />
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:30 }}>
+              <div style={{ fontSize:16, fontWeight:700, color:'rgba(255,255,255,0.45)' }}>fanglobe.live/moment/{moment.short_id}</div>
+            </div>
+            <div style={{ fontSize:80, fontWeight:800, color:'#fff', marginBottom:12, letterSpacing:-3, display:'flex' }}>
+              {moment.title}
+            </div>
+            {event && (
+              <div style={{ fontSize:32, fontWeight:600, color:'rgba(255,255,255,0.75)', marginBottom:24, display:'flex', alignItems:'center', gap:16 }}>
+                <span>{event.home_flag}</span>
+                <span>{event.home_team}</span>
+                <span style={{ color:'rgba(255,255,255,0.3)', fontSize:24 }}>vs</span>
+                <span>{event.away_team}</span>
+                <span>{event.away_flag}</span>
+              </div>
+            )}
+            <div style={{ display:'flex', gap:36, marginTop:'auto', alignItems:'flex-end' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <div style={{ fontSize:72, fontWeight:800, color, lineHeight:1 }}>{moment.fas_score}</div>
+                <div style={{ fontSize:14, color:'rgba(255,255,255,0.4)', letterSpacing:2, textTransform:'uppercase' }}>FAS score</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <div style={{ fontSize:48, fontWeight:800, color:'#fff', lineHeight:1 }}>{fmt(moment.fans_at_moment)}</div>
+                <div style={{ fontSize:14, color:'rgba(255,255,255,0.4)', letterSpacing:2, textTransform:'uppercase' }}>fans watching</div>
+              </div>
+              {moment.top_city && (
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  <div style={{ fontSize:32, fontWeight:800, color:'#39FF76', lineHeight:1 }}>{moment.top_city}</div>
+                  <div style={{ fontSize:14, color:'rgba(255,255,255,0.4)', letterSpacing:2, textTransform:'uppercase' }}>loudest city</div>
+                </div>
+              )}
+            </div>
+          </div>,
+          { width: 1200, height: 630 }
+        )
+      }
+    } catch {}
+  }
 
   let homeTeam = 'FanGlobe', awayTeam = 'Live Fan Tracker'
   let homeFlag = '🌍', awayFlag = '⚽'
@@ -40,45 +97,35 @@ export async function GET(req: NextRequest) {
 
   const accent = '#39FF76'
 
-  // ── CITY CARD — viral share for "my city is #N" moment ──────────────────
   if (type === 'citycard' && city) {
     const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : ''
     const rankColor = rank === 1 ? '#FFD166' : rank === 2 ? '#D4D4D4' : rank === 3 ? '#B87333' : accent
 
     return new ImageResponse(
-      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#04050a', padding: '60px 64px', fontFamily: 'sans-serif', position: 'relative' }}>
-        {/* Radial glow */}
-        <div style={{ position: 'absolute', top: -200, left: '50%', width: 900, height: 900, borderRadius: '50%', background: `radial-gradient(circle, ${rankColor}22 0%, transparent 60%)`, transform: 'translateX(-50%)', display: 'flex' }} />
-
-        {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}>fanglobe.live</div>
+      <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#04050a', padding:'60px 64px', fontFamily:'sans-serif', position:'relative' }}>
+        <div style={{ position:'absolute', top:-200, left:'50%', width:900, height:900, borderRadius:'50%', background:`radial-gradient(circle, ${rankColor}22 0%, transparent 60%)`, transform:'translateX(-50%)', display:'flex' }} />
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:30 }}>
+          <div style={{ fontSize:18, fontWeight:700, color:'rgba(255,255,255,0.45)' }}>fanglobe.live</div>
         </div>
-
-        {/* Hero: city + rank */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginTop: 16 }}>
-          <div style={{ fontSize: 110, marginBottom: 4 }}>{flag}</div>
-          <div style={{ fontSize: 64, fontWeight: 800, color: '#fff', marginBottom: 6, letterSpacing: -2 }}>
-            {city}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontSize: 48, fontWeight: 800, color: rankColor, display: 'flex', alignItems: 'center' }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', marginTop:16 }}>
+          <div style={{ fontSize:110, marginBottom:4 }}>{flag}</div>
+          <div style={{ fontSize:64, fontWeight:800, color:'#fff', marginBottom:6, letterSpacing:-2 }}>{city}</div>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ fontSize:48, fontWeight:800, color:rankColor, display:'flex', alignItems:'center' }}>
               {rankEmoji} #{rank} globally
             </div>
           </div>
           {count > 0 && (
-            <div style={{ fontSize: 22, color: 'rgba(255,255,255,0.5)', marginTop: 14, display: 'flex' }}>
+            <div style={{ fontSize:22, color:'rgba(255,255,255,0.5)', marginTop:14, display:'flex' }}>
               {fmt(count)} fans watching · {homeTeam} vs {awayTeam}
             </div>
           )}
         </div>
-
-        {/* Footer CTA */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 'auto', paddingTop: 40 }}>
-          <div style={{ background: accent, color: '#000', fontWeight: 800, fontSize: 18, padding: '12px 28px', borderRadius: 100, display: 'flex' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, marginTop:'auto', paddingTop:40 }}>
+          <div style={{ background:accent, color:'#000', fontWeight:800, fontSize:18, padding:'12px 28px', borderRadius:100, display:'flex' }}>
             📍 Drop your pin
           </div>
-          <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.35)', display: 'flex' }}>
+          <div style={{ fontSize:16, color:'rgba(255,255,255,0.35)', display:'flex' }}>
             Help {city} climb the leaderboard
           </div>
         </div>
@@ -87,46 +134,45 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  // ── DEFAULT MATCH CARD ───────────────────────────────────────────────────
   return new ImageResponse(
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#04050a', padding: '40px 48px', fontFamily: 'sans-serif', position: 'relative' }}>
-      <div style={{ position: 'absolute', top: -100, left: '50%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(57,255,118,0.08) 0%, transparent 70%)', transform: 'translateX(-50%)', display: 'flex' }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>fanglobe.live</div>
-        <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex' }} />
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', letterSpacing: 2, textTransform: 'uppercase' }}>Global Fan Tracker</div>
+    <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#04050a', padding:'40px 48px', fontFamily:'sans-serif', position:'relative' }}>
+      <div style={{ position:'absolute', top:-100, left:'50%', width:600, height:600, borderRadius:'50%', background:'radial-gradient(circle, rgba(57,255,118,0.08) 0%, transparent 70%)', transform:'translateX(-50%)', display:'flex' }} />
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:32 }}>
+        <div style={{ fontSize:14, fontWeight:700, color:'rgba(255,255,255,0.4)', letterSpacing:1 }}>fanglobe.live</div>
+        <div style={{ width:4, height:4, borderRadius:'50%', background:'rgba(255,255,255,0.15)', display:'flex' }} />
+        <div style={{ fontSize:11, color:'rgba(255,255,255,0.25)', letterSpacing:2, textTransform:'uppercase' }}>Global Fan Tracker</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 28 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 64 }}>{homeFlag}</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>{homeTeam}</div>
+      <div style={{ display:'flex', alignItems:'center', gap:24, marginBottom:28 }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+          <div style={{ fontSize:64 }}>{homeFlag}</div>
+          <div style={{ fontSize:24, fontWeight:700, color:'#fff' }}>{homeTeam}</div>
         </div>
-        <div style={{ fontSize: 20, color: 'rgba(255,255,255,0.2)', fontWeight: 300 }}>vs</div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 64 }}>{awayFlag}</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>{awayTeam}</div>
+        <div style={{ fontSize:20, color:'rgba(255,255,255,0.2)', fontWeight:300 }}>vs</div>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+          <div style={{ fontSize:64 }}>{awayFlag}</div>
+          <div style={{ fontSize:24, fontWeight:700, color:'#fff' }}>{awayTeam}</div>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: accent }}>{fmt(reach)}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, textTransform: 'uppercase' }}>fans watching</div>
+      <div style={{ display:'flex', gap:24, marginBottom:24 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          <div style={{ fontSize:36, fontWeight:800, color:accent }}>{fmt(reach)}</div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', letterSpacing:2, textTransform:'uppercase' }}>fans watching</div>
         </div>
         {fas > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: fas >= 70 ? accent : fas >= 45 ? '#ffd166' : 'rgba(255,255,255,0.5)' }}>{fas}</div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>/ 100</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:4, marginLeft:16 }}>
+            <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+              <div style={{ fontSize:36, fontWeight:800, color: fasColor(fas) }}>{fas}</div>
+              <div style={{ fontSize:14, color:'rgba(255,255,255,0.4)' }}>/ 100</div>
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, textTransform: 'uppercase' }}>FAS · {fasLabel}</div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', letterSpacing:2, textTransform:'uppercase' }}>FAS · {fasLabel}</div>
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
-        <div style={{ background: accent, color: '#000', fontWeight: 700, fontSize: 13, padding: '8px 20px', borderRadius: 100, display: 'flex' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:'auto' }}>
+        <div style={{ background:accent, color:'#000', fontWeight:700, fontSize:13, padding:'8px 20px', borderRadius:100, display:'flex' }}>
           📍 Drop your pin
         </div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>fanglobe.live/match/{matchSlug}</div>
+        <div style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>fanglobe.live/match/{matchSlug}</div>
       </div>
     </div>,
     { width: 1200, height: 630 }
