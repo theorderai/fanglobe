@@ -15,7 +15,6 @@ import CityPopup from '@/components/CityPopup'
 import MatchBrowser from '@/components/MatchBrowser'
 import { getExpectedReach, GLOBAL_FANS_TRACKED } from '@/lib/events'
 import EmailCaptureModal from '@/components/EmailCaptureModal'
-import { usePushNotifications } from '@/hooks/usePushNotifications'
 import type { CityData, FanGlobeEvent } from '@/types'
 
 const GlobeComponent = nextDynamic(() => import('@/components/GlobeComponent'), {
@@ -252,7 +251,6 @@ export default function GlobePage() {
   const [selectedCity, setSelectedCity] = useState<CityData|null>(null)
   const [snapshots, setSnapshots] = useState<Record<string,{totalCount:number;pulse:{fire:number;ecstatic:number;nervous:number;crushed:number;moment:number}}>>({})
   const [matchBrowserSport, setMatchBrowserSport] = useState<string|null>(null)
-  const push = usePushNotifications(auth.user?.id ?? 'anon', undefined)
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [userCityRank, setUserCityRank] = useState<number>(0)
   const [userCityData, setUserCityData] = useState<{city:string;country:string;flag:string}|null>(null)
@@ -396,9 +394,6 @@ export default function GlobePage() {
               </div>
               <div style={{ display:'flex',alignItems:'center',gap:6 }}>
                 <div style={{ display:'flex',alignItems:'center',gap:6 }}>
-                {push.state !== 'unsupported' && push.state !== 'granted' && (
-                  <button onClick={push.subscribe} disabled={push.loading} title="Get match notifications" style={{ background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'50%',width:28,height:28,cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:push.loading?0.5:1 }}>🔔</button>
-                )}
                 <details style={{ position:'relative',flexShrink:0 }}>
                   <summary style={{ listStyle:'none',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'50%',width:28,height:28,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center' }}>⋯</summary>
                   <div style={{ position:'absolute',top:34,right:0,zIndex:40,background:'rgba(4,5,10,0.96)',backdropFilter:'blur(20px)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:6,minWidth:170,boxShadow:'0 20px 50px rgba(0,0,0,0.7)' }}>
@@ -409,9 +404,6 @@ export default function GlobePage() {
                     <a href="/india-pakistan" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🏏 India vs Pakistan</a>
                   </div>
                 </details>
-                {push.state === 'granted' && (
-                  <div style={{ width:6,height:6,borderRadius:'50%',background:accent,boxShadow:`0 0 6px ${accent}` }} title="Notifications on" />
-                )}
                 <ActiveMatchPill event={activeEvent} accent={accent} />
                 </div>
               </div>
