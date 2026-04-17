@@ -387,7 +387,7 @@ export default function GlobePage() {
       `}</style>
 
       {/* ── TOP BAR ─────────────────────────────────────────────── */}
-      <div style={{ flexShrink:0,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(255,255,255,0.06)',zIndex:30 }}>
+      <div style={{ flexShrink:0,background:'#051D1A',borderBottom:'1px solid rgba(57,255,118,0.15)',zIndex:30,boxShadow:'0 2px 12px rgba(0,0,0,0.5)' }}>
         {isMobile ? (
           /* Mobile: row1 = logo + pill, row2 = sport tabs */
           <>
@@ -399,8 +399,8 @@ export default function GlobePage() {
               <div style={{ display:'flex',alignItems:'center',gap:6 }}>
                 <div style={{ display:'flex',alignItems:'center',gap:6 }}>
                 <details style={{ position:'relative',flexShrink:0 }}>
-                  <summary style={{ listStyle:'none',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'50%',width:28,height:28,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center' }}>⋯</summary>
-                  <div style={{ position:'absolute',top:34,right:0,zIndex:40,background:'rgba(4,5,10,0.96)',backdropFilter:'blur(20px)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:6,minWidth:170,boxShadow:'0 20px 50px rgba(0,0,0,0.7)' }}>
+                  <summary style={{ listStyle:'none',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:8,width:32,height:30,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff' }}>☰</summary>
+                  <div style={{ position:'absolute',top:34,right:0,zIndex:40,background:'#051D1A',border:'1px solid rgba(57,255,118,0.2)',borderRadius:12,padding:6,minWidth:170,boxShadow:'0 20px 50px rgba(0,0,0,0.7)' }}>
                     <a href="/leaderboard" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🏆 Leaderboard</a>
                     <a href="/fas/weekly" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>⚡ FAS Weekly</a>
                     <a href="/fas" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>📊 What is FAS?</a>
@@ -450,13 +450,14 @@ export default function GlobePage() {
               <div style={{ display:'flex',alignItems:'center',gap:6,flexShrink:0 }}>
                 <div style={{ width:26,height:26,borderRadius:7,background:accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,boxShadow:`0 0 12px ${accent}44`,transition:'background 0.4s' }}>{sportCfg?.emoji??'🌍'}</div>
                 <span style={{ fontSize:13,fontWeight:800,color:'#fff',fontFamily:"'Syne',sans-serif" }}>fanglobe<span style={{ color:accent }}>.live</span></span>
-                <div style={{ display:'flex',alignItems:'center',gap:4,marginLeft:6 }}>
-                  <a href="/leaderboard" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🏆 Leaderboard</a>
-                  <a href="/fas/weekly" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>⚡ FAS Weekly</a>
-                  <a href="/passport" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🎫 Passport</a>
-                  <a href="/moments" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>✨ Moments</a>
-                  <a href="/oracle" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🔮 Oracle</a>
-                  <button onClick={() => setShowSquad(true)} style={{ background:'rgba(255,107,53,0.1)',border:'1px solid rgba(255,107,53,0.3)',borderRadius:100,padding:'3px 9px',cursor:'pointer',fontSize:9,fontWeight:700,color:'#ff6b35',fontFamily:"'JetBrains Mono',monospace",whiteSpace:'nowrap' }}>👥 SQUAD</button>
+                <div style={{ display:'flex',alignItems:'center',gap:2,marginLeft:10 }}>
+                  <a href="/globe" style={{ fontSize:12,fontWeight:700,color:'#000',background:'#39FF76',textDecoration:'none',fontFamily:"'Syne',sans-serif",borderRadius:8,padding:'6px 12px',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4 }}>🌍 Globe</a>
+                  <a href="/moments" style={{ fontSize:12,fontWeight:700,color:'#fff',textDecoration:'none',fontFamily:"'Syne',sans-serif",borderRadius:8,padding:'6px 12px',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4 }}>✨ Moments</a>
+                  <a href="/oracle" style={{ fontSize:12,fontWeight:700,color:'#fff',textDecoration:'none',fontFamily:"'Syne',sans-serif",borderRadius:8,padding:'6px 12px',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4 }}>🔮 Oracle</a>
+                  <a href="/leaderboard" style={{ fontSize:12,fontWeight:700,color:'#fff',textDecoration:'none',fontFamily:"'Syne',sans-serif",borderRadius:8,padding:'6px 12px',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4 }}>🏆 Leaderboard</a>
+                  <a href="/fas/weekly" style={{ fontSize:12,fontWeight:700,color:'#fff',textDecoration:'none',fontFamily:"'Syne',sans-serif",borderRadius:8,padding:'6px 12px',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4 }}>⚡ FAS</a>
+                  <a href="/passport" style={{ fontSize:12,fontWeight:700,color:'#fff',textDecoration:'none',fontFamily:"'Syne',sans-serif",borderRadius:8,padding:'6px 12px',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4 }}>🎫 Passport</a>
+                  <button onClick={() => setShowSquad(true)} style={{ background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'6px 12px',cursor:'pointer',fontSize:12,fontWeight:700,color:'#fff',fontFamily:"'Syne',sans-serif",whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4,marginLeft:6 }}>👥 Squad</button>
                 </div>
               </div>
               {/* Sport tabs — centered */}
