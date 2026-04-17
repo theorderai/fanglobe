@@ -1,5 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import SiteHeader from '@/components/SiteHeader'
+import SiteFooter from '@/components/SiteFooter'
 
 interface City { rank: number; city: string; country: string; flag: string; count: number; home: number; away: number }
 interface Event { id: string; slug: string; homeTeam: string; awayTeam: string; homeFlag: string; awayFlag: string; kickoffAt: string }
@@ -26,10 +29,9 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const match = params.get('match')
-    // Set both at once to avoid double-fetch from state update triggering re-render
     if (match) setSelectedMatch(match)
     fetchData(match)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line
 
   const fetchData = async (match: string | null) => {
     setLoading(true)
@@ -58,28 +60,23 @@ export default function LeaderboardPage() {
   const cities = data?.cities ?? []
 
   return (
-    <div style={{ minHeight: '100vh', background: '#04050a', color: '#fff', fontFamily: "'Syne', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#04050a', color: '#fff', fontFamily: "'Syne', sans-serif", display:'flex', flexDirection:'column' }}>
+      <SiteHeader />
 
-      {/* Header */}
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <a href="/globe" style={{ fontSize: 13, fontWeight: 800, color: '#fff', textDecoration: 'none' }}>
-            fanglobe<span style={{ color: '#39FF76' }}>.live</span>
-          </a>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>/</span>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>city leaderboard</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={share} style={{ fontSize: 11, fontWeight: 700, color: '#39FF76', background: 'rgba(57,255,118,0.1)', border: '1px solid rgba(57,255,118,0.25)', borderRadius: 100, padding: '5px 12px', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
-            {copied ? '✓ Copied' : 'Share ↗'}
+      <div style={{ flex:1, maxWidth: 760, margin: '0 auto', padding: '28px 16px', width:'100%' }}>
+
+        {/* Page heading */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, gap:12, flexWrap:'wrap' }}>
+          <div>
+            <h1 style={{ fontSize:22, fontWeight:800, margin:0, marginBottom:4 }}>City Leaderboard</h1>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', fontFamily:"'JetBrains Mono',monospace" }}>
+              Which city has the most fans on the globe?
+            </div>
+          </div>
+          <button onClick={share} style={{ fontSize: 11, fontWeight: 700, color: '#39FF76', background: 'rgba(57,255,118,0.1)', border: '1px solid rgba(57,255,118,0.25)', borderRadius: 100, padding: '7px 14px', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
+            {copied ? '✓ Copied' : 'Share this match ↗'}
           </button>
-          <a href="/globe" style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 100, padding: '5px 12px', textDecoration: 'none', fontFamily: "'JetBrains Mono', monospace" }}>
-            ← Globe
-          </a>
         </div>
-      </div>
-
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px' }}>
 
         {/* Match selector */}
         {data?.events && data.events.length > 1 && (
@@ -102,52 +99,48 @@ export default function LeaderboardPage() {
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid rgba(57,255,118,0.15)', borderTopColor: '#39FF76', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid rgba(57,255,118,0.15)', borderTopColor: '#39FF76', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '2px' }}>LOADING...</div>
           </div>
         ) : (
           <>
-            {/* Hero: FAS score + match info */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '24px', marginBottom: 16, display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '20px', marginBottom: 16, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
               {fas && (
                 <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                  <div style={{ fontSize: 64, fontWeight: 800, lineHeight: 1, fontFamily: "'JetBrains Mono', monospace", color: fas.color, textShadow: `0 0 40px ${fas.color}55` }}>{fas.score}</div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: fas.color, letterSpacing: '2px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace", marginTop: 4 }}>FAS</div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{fas.label}</div>
+                  <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1, fontFamily: "'JetBrains Mono', monospace", color: fas.color, textShadow: `0 0 40px ${fas.color}55` }}>{fas.score}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: fas.color, letterSpacing: '2px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace", marginTop: 4 }}>FAS · {fas.label}</div>
                 </div>
               )}
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth:200 }}>
                 {event && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
-                      {event.homeFlag} {event.homeTeam} <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 14 }}>vs</span> {event.awayTeam} {event.awayFlag}
+                  <Link href={`/match/${event.slug}`} style={{ display:'block', marginBottom: 10, textDecoration:'none' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
+                      {event.homeFlag} {event.homeTeam} <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>vs</span> {event.awayTeam} {event.awayFlag}
                     </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {new Date(event.kickoffAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </div>
-                  </div>
+                  </Link>
                 )}
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                   <div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: '#39FF76', fontFamily: "'JetBrains Mono', monospace" }}>{fmt(data?.totalFans ?? 0)}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>fans watching</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#39FF76', fontFamily: "'JetBrains Mono', monospace" }}>{fmt(data?.totalFans ?? 0)}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>fans</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{data?.countryCount ?? 0}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>countries</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{data?.countryCount ?? 0}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>countries</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{cities.length}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>cities on globe</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{cities.length}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>cities</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Leaderboard */}
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
-              {/* Column headers */}
               <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 80px', gap: 8, padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>
                 <span>#</span>
                 <span>City</span>
@@ -164,9 +157,7 @@ export default function LeaderboardPage() {
                   <div key={city.city} style={{
                     display: 'grid', gridTemplateColumns: '40px 1fr 80px 80px', gap: 8,
                     padding: '12px 16px', borderBottom: i < cities.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    transition: 'background 0.1s',
                   }}>
-                    {/* Rank */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {rankStyle ? (
                         <div style={{ width: 24, height: 24, borderRadius: '50%', background: rankStyle.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: rankStyle.color, fontFamily: "'JetBrains Mono', monospace" }}>{i+1}</div>
@@ -174,7 +165,6 @@ export default function LeaderboardPage() {
                         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)', fontFamily: "'JetBrains Mono', monospace", textAlign: 'center', width: 24, display: 'block' }}>{i+1}</span>
                       )}
                     </div>
-                    {/* City */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                       <span style={{ fontSize: 18, flexShrink: 0 }}>{city.flag}</span>
                       <div style={{ minWidth: 0 }}>
@@ -182,11 +172,9 @@ export default function LeaderboardPage() {
                         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>{city.country}</div>
                       </div>
                     </div>
-                    {/* Fan count */}
                     <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: '#39FF76', fontFamily: "'JetBrains Mono', monospace" }}>{fmt(city.count)}</span>
                     </div>
-                    {/* Bar + pct */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
                       <div style={{ width: 40, height: 4, borderRadius: 100, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                         <div style={{ width: `${barWidth}%`, height: '100%', background: '#39FF76', borderRadius: 100 }} />
@@ -198,23 +186,36 @@ export default function LeaderboardPage() {
               })}
             </div>
 
-            {/* Footer CTA */}
-            <div style={{ textAlign: 'center', marginTop: 24, padding: '20px', background: 'rgba(57,255,118,0.06)', border: '1px solid rgba(57,255,118,0.15)', borderRadius: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Is your city on the leaderboard?</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 16 }}>Drop your pin on the globe and represent your city.</div>
-              <a href="/globe" style={{ display: 'inline-block', background: '#39FF76', color: '#000', fontWeight: 800, fontSize: 13, padding: '10px 28px', borderRadius: 100, textDecoration: 'none', fontFamily: "'Syne', sans-serif", boxShadow: '0 0 24px rgba(57,255,118,0.3)' }}>
-                📍 Drop my pin
-              </a>
+            {/* Cross-links */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:10, marginTop:24 }}>
+              <Link href={`/match/${selectedMatch ?? event?.slug ?? ''}`} style={crossLinkStyle}>
+                📄 Match preview
+              </Link>
+              <Link href="/fas/weekly" style={crossLinkStyle}>
+                ⚡ FAS Weekly Report
+              </Link>
+              <Link href="/globe" style={{ ...crossLinkStyle, background:'#39FF76', color:'#000', border:'none' }}>
+                📍 Drop your pin
+              </Link>
             </div>
           </>
         )}
       </div>
 
+      <SiteFooter />
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        * { box-sizing: border-box; }
         ::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   )
+}
+
+const crossLinkStyle: React.CSSProperties = {
+  display:'flex', alignItems:'center', justifyContent:'center',
+  padding:'12px 16px', borderRadius:12,
+  background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)',
+  color:'#fff', fontSize:13, fontWeight:700,
+  textDecoration:'none', fontFamily:"'Syne',sans-serif",
 }
