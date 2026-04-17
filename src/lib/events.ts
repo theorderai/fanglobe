@@ -107,6 +107,35 @@ export function getFallbackEvents(limit = 16): FanGlobeEvent[] {
   return all.slice(0, limit)
 }
 
+export function getExpectedReach(eventId: string): number {
+  // Check direct slug match
+  const EXPECTED_REACH: Record<string, number> = {
+    'wc26-c1-bra-mar':   1_800_000,
+    'wc26-d1-usa-par':   1_400_000,
+    'wc26-d2-usa-aus':   900_000,
+    'wc26-l1-eng-cro':   1_200_000,
+    'wc26-j1-arg-alg':   1_600_000,
+    'wc26-h4-uru-esp':   1_100_000,
+    'wc26-i3-fra-nor':   1_300_000,
+    'wc26-final':        4_500_000,
+    'wc26-sf-1':         2_800_000,
+    'wc26-sf-2':         2_600_000,
+    'ucl26-qf1-psg-liv': 1_100_000,
+    'ucl26-qf2-rma-bay': 1_300_000,
+    'ucl26-qf3-bar-atl': 1_200_000,
+    'ucl26-qf4-scp-ars': 900_000,
+    'ucl26-final':       2_200_000,
+    'ipl26-m1-rcb-srh':  800_000,
+    'ipl26-m6-rcb-mi':   950_000,
+    'ipl26-final':       1_800_000,
+    'ind-pak-2026':      2_400_000,
+  }
+  return EXPECTED_REACH[eventId] ?? 500_000
+}
+
+// Total fans ever tracked across all matches (warm start number)
+export const GLOBAL_FANS_TRACKED = 4_200_000
+
 export function getUpcomingEvents(sportId?: string, limit = 120): FanGlobeEvent[] {
   const TODAY_TS = new Date('2026-03-19T00:00:00Z').getTime()
   let all = [...UPCOMING_SPORTS_EVENTS, ...WC2026_EVENTS]
@@ -558,6 +587,28 @@ function defaultSeed(event: FanGlobeEvent): CityData[] {
 
 export function getEventSeedCities(eventId: string): CityData[] {
   // Slug aliases for new DB events → existing seed data
+  const EXPECTED_REACH: Record<string, number> = {
+    'wc26-c1-bra-mar':   1_800_000,
+    'wc26-d1-usa-par':   1_400_000,
+    'wc26-d2-usa-aus':   900_000,
+    'wc26-l1-eng-cro':   1_200_000,
+    'wc26-j1-arg-alg':   1_600_000,
+    'wc26-h4-uru-esp':   1_100_000,
+    'wc26-i3-fra-nor':   1_300_000,
+    'wc26-final':        4_500_000,
+    'wc26-sf-1':         2_800_000,
+    'wc26-sf-2':         2_600_000,
+    'ucl26-qf1-psg-liv': 1_100_000,
+    'ucl26-qf2-rma-bay': 1_300_000,
+    'ucl26-qf3-bar-atl': 1_200_000,
+    'ucl26-qf4-scp-ars': 900_000,
+    'ucl26-final':       2_200_000,
+    'ipl26-m1-rcb-srh':  800_000,
+    'ipl26-m6-rcb-mi':   950_000,
+    'ipl26-final':       1_800_000,
+    'ind-pak-2026':      2_400_000,
+  }
+
   const slugAliases: Record<string, string> = {
     // World Cup 2026
     'wc26-c1-bra-mar': 'wc-brazil-morocco',

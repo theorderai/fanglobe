@@ -13,6 +13,8 @@ import PickYourSide from '@/components/PickYourSide'
 import ShareCard from '@/components/ShareCard'
 import CityPopup from '@/components/CityPopup'
 import MatchBrowser from '@/components/MatchBrowser'
+import { getExpectedReach, GLOBAL_FANS_TRACKED } from '@/lib/events'
+import EmailCaptureModal from '@/components/EmailCaptureModal'
 import type { CityData, FanGlobeEvent } from '@/types'
 
 const GlobeComponent = nextDynamic(() => import('@/components/GlobeComponent'), {
@@ -123,19 +125,37 @@ function VibeMeter({ pulse, userVibe, accent, onVote }: {
   )
 }
 
-function FanCounter({ total, countryCount, teamName, accent, fas }: { total:number; countryCount:number; teamName:string; accent:string; fas?: { score:number; label:string; color:string } }) {
+function FanCounter({ total, countryCount, teamName, accent, fas, expectedReach }: {
+  total:number; countryCount:number; teamName:string; accent:string
+  fas?: { score:number; label:string; color:string }
+  expectedReach?: number
+}) {
+  // Warm start: if real data is thin, show expected reach with clear label
+  const isPreMatch = total < 1000
+  const displayNumber = isPreMatch && expectedReach ? expectedReach : total
+  const isExpected = isPreMatch && !!expectedReach
+
   return (
     <div style={{ textAlign:'center' }}>
+      {/* Global community warm-start banner */}
+      {total === 0 && (
+        <div style={{ fontSize:9,color:'rgba(255,255,255,0.25)',letterSpacing:'1.5px',fontFamily:"'JetBrains Mono',monospace",marginBottom:6 }}>
+          <span style={{ color:accent }}>● </span>{fmt(GLOBAL_FANS_TRACKED)}+ fans tracked across all matches
+        </div>
+      )}
       <div style={{ fontSize:9,color:'rgba(255,255,255,0.35)',letterSpacing:'2px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace",marginBottom:2 }}>
-        <span style={{ color:accent }}>● </span>{countryCount} countries<span style={{ margin:'0 8px',opacity:0.4 }}>·</span><span style={{ color:accent }}>● </span>live
+        {isExpected
+          ? <><span style={{ color:accent }}>● </span>expected reach</>
+          : <><span style={{ color:accent }}>● </span>{countryCount} countries<span style={{ margin:'0 8px',opacity:0.4 }}>·</span><span style={{ color:accent }}>● </span>live</>
+        }
       </div>
-      <div style={{ fontSize:'clamp(32px,8vw,56px)',fontWeight:800,letterSpacing:-2,lineHeight:1,fontFamily:"'JetBrains Mono',monospace",color:'#fff',textShadow:`0 0 40px ${accent}44` }}>
-        {fmt(total)}
+      <div style={{ fontSize:'clamp(32px,8vw,56px)',fontWeight:800,letterSpacing:-2,lineHeight:1,fontFamily:"'JetBrains Mono',monospace",color: isExpected ? 'rgba(255,255,255,0.45)' : '#fff',textShadow:`0 0 40px ${accent}${isExpected ? '22' : '44'}` }}>
+        {fmt(displayNumber)}
       </div>
       <div style={{ fontSize:9,color:'rgba(255,255,255,0.28)',letterSpacing:'2.5px',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace",marginTop:2 }}>
-        fans watching {teamName}
+        {isExpected ? `fans expected for ${teamName}` : `fans watching ${teamName}`}
       </div>
-      {fas && fas.score > 0 && (
+      {fas && fas.score > 0 && !isExpected && (
         <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginTop:8,background:'rgba(255,255,255,0.05)',border:`1px solid ${fas.color}33`,borderRadius:100,padding:'4px 12px' }}>
           <span style={{ fontSize:9,color:'rgba(255,255,255,0.3)',fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px' }}>FAS</span>
           <span style={{ fontSize:16,fontWeight:800,color:fas.color,fontFamily:"'JetBrains Mono',monospace",lineHeight:1 }}>{fas.score}</span>
@@ -217,6 +237,7 @@ export default function GlobePage() {
   const auth = useAuth()
 
   const [activeEventId, setActiveEventId] = useState('')
+  const effectiveId = activeEventId || events[0]?.slug || events[0]?.id || ''
   const [userPin, setUserPin] = useState<{lat:number;lng:number;color?:string}|null>(null)
   const [newCheckinPos, setNewCheckinPos] = useState<{lat:number;lng:number}|null>(null)
   const [hasCheckedIn, setHasCheckedIn] = useState(false)
@@ -230,9 +251,12 @@ export default function GlobePage() {
   const [selectedCity, setSelectedCity] = useState<CityData|null>(null)
   const [snapshots, setSnapshots] = useState<Record<string,{totalCount:number;pulse:{fire:number;ecstatic:number;nervous:number;crushed:number;moment:number}}>>({})
   const [matchBrowserSport, setMatchBrowserSport] = useState<string|null>(null)
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [userCityRank, setUserCityRank] = useState<number>(0)
+  const [userCityData, setUserCityData] = useState<{city:string;country:string;flag:string}|null>(null)
+  const [captchaToken, setCaptchaToken] = useState<string|null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
 
-  const effectiveId = activeEventId || events[0]?.slug || events[0]?.id || ''
   const activeEvent = events.find(e=>(e.slug??e.id)===effectiveId) ?? events[0]
   const sportCfg = activeEvent ? SPORTS[activeEvent.sportId] : SPORTS.soccer
   const accent = sportCfg?.accent ?? '#39FF76'
@@ -289,6 +313,14 @@ export default function GlobePage() {
   const handleCheckin = useCallback(async () => {
     if (checkinLoading||hasCheckedIn||!activeEvent) return
     setCheckinLoading(true)
+    // Verify hCaptcha if token present
+    if (captchaToken) {
+      try {
+        const vRes = await fetch('/api/captcha/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: captchaToken }) })
+        const vData = await vRes.json()
+        if (!vData.success) { showToast('Verification failed — try again'); setCheckinLoading(false); return }
+      } catch { /* bypass on network error */ }
+    }
     const place = (lat:number,lng:number) => {
       setPendingPin({lat,lng}); setCheckinLoading(false)
       if (activeEvent.isRivalry) setShowPickSide(true); else commitCheckin(lat,lng,'neutral')
@@ -311,6 +343,13 @@ export default function GlobePage() {
       if(STORAGE_KEY) try{localStorage.setItem(STORAGE_KEY,JSON.stringify(pin))}catch{}
       showToast(data.city?`${data.flag??'📍'} ${data.city} is on the globe!`:"You're on the globe! 🌍")
       setTimeout(()=>setNewCheckinPos(null),200)
+      // Show email capture at emotional peak — after checkin confirmed
+      if (data.city) {
+        const rank = cities.findIndex((c: {city:string}) => c.city === data.city) + 1
+        setUserCityData({ city: data.city, country: data.country ?? '', flag: data.flag ?? '📍' })
+        setUserCityRank(rank || 1)
+        setTimeout(() => setShowEmailModal(true), 1500)
+      }
     } catch { showToast('Try again') }
   }, [auth.accessToken,activeEvent,accent,STORAGE_KEY,showToast])
 
@@ -353,7 +392,9 @@ export default function GlobePage() {
                 <div style={{ width:26,height:26,borderRadius:7,background:accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,boxShadow:`0 0 12px ${accent}44`,transition:'background 0.4s',flexShrink:0 }}>{sportCfg?.emoji??'🌍'}</div>
                 <span style={{ fontSize:13,fontWeight:800,color:'#fff',fontFamily:"'Syne',sans-serif" }}>fanglobe<span style={{ color:accent }}>.live</span></span>
               </div>
-              <ActiveMatchPill event={activeEvent} accent={accent} />
+              <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+                <ActiveMatchPill event={activeEvent} accent={accent} />
+              </div>
             </div>
             <div style={{ padding:'0 12px 6px' }}>
               <SportTabs events={events} activeSport={activeSport} accent={accent} onSwitch={switchSport} onSelectFirst={handleSwitchSportFirst} isMobile={isMobile} onMobileTap={(s) => setMatchBrowserSport(s)} />
@@ -421,7 +462,7 @@ export default function GlobePage() {
       {/* ── BOTTOM PANEL ───────────────────────────────────────── */}
       <div style={{ flexShrink:0,background:'#080810',borderTop:'1px solid rgba(255,255,255,0.06)',padding:`8px ${isMobile?'12px':'20%'} env(safe-area-inset-bottom,6px)` }}>
         {/* Fan counter */}
-        <FanCounter total={total} countryCount={countryCount} teamName={teamName} accent={accent} fas={snapshot?.fas} />
+        <FanCounter total={total} countryCount={countryCount} teamName={teamName} accent={accent} fas={snapshot?.fas} expectedReach={getExpectedReach(effectiveId)} />
 
         {/* CTA */}
         <div style={{ margin:'8px 0 6px' }}>
