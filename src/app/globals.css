@@ -1,108 +1,97 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-primary:   #04050a;
+  --bg-secondary: #0a0b12;
+  --bg-tertiary:  rgba(255,255,255,0.04);
+  --bg-panel:     rgba(255,255,255,0.03);
+
+  --text-primary: #ffffff;
+  --text-body:    rgba(255,255,255,0.88);
+  --text-muted:   rgba(255,255,255,0.68);
+  --text-subtle:  rgba(255,255,255,0.55);
+  --text-label:   rgba(255,255,255,0.65);
+
+  --border-soft:   rgba(255,255,255,0.08);
+  --border-medium: rgba(255,255,255,0.14);
+  --border-strong: rgba(255,255,255,0.22);
+
+  --accent-green:  #39FF76;
+  --accent-cyan:   #00B4FF;
+  --accent-red:    #DC2626;
+  --accent-orange: #EA580C;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html, body {
-  background: #000;
-  color: #fff;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+  margin: 0; padding: 0;
+  background: var(--bg-primary);
+  color: var(--text-body);
+  font-family: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
-/* Scrollbar hide */
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; }
+body { min-height: 100vh; min-height: 100svh; }
 
-/* Animations */
+/* Global readability upgrade — any residual low-contrast text gets bumped
+   This catches inline styles in every component without touching each file */
+[style*="rgba(255,255,255,0.25)"],
+[style*="rgba(255,255,255,0.3)"],
+[style*="rgba(255,255,255,0.35)"] {
+  color: rgba(255,255,255,0.6) !important;
+}
+[style*="rgba(255,255,255,0.4)"],
+[style*="rgba(255,255,255,0.45)"] {
+  color: rgba(255,255,255,0.72) !important;
+}
+[style*="rgba(255,255,255,0.5)"],
+[style*="rgba(255,255,255,0.55)"] {
+  color: rgba(255,255,255,0.78) !important;
+}
+
+/* Labels with letter-spacing+uppercase mono get a higher floor */
+[style*="letterSpacing"][style*="uppercase"] {
+  color: rgba(255,255,255,0.72) !important;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+::selection { background: var(--accent-green); color: #000; }
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input, textarea {
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+input::placeholder, textarea::placeholder {
+  color: rgba(255,255,255,0.48) !important;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes pip { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
-@keyframes fadeInUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-@keyframes slideIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
-
-/* Desktop only — hide on mobile */
-@media (max-width: 768px) {
-  .desktop-only { display: none !important; }
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
 }
 
-/* Fan counter — responsive size */
-.fan-counter { font-size: 56px; }
-@media (max-width: 768px) {
-  .fan-counter { font-size: 42px; letter-spacing: -2px; }
-}
-
-/* Badge top offset on mobile — below the 3-row switcher */
-@media (max-width: 768px) {
-  :root { --badge-top: 118px; }
-}
-@media (min-width: 769px) {
-  :root { --badge-top: 76px; }
-}
-
-/* Switcher — tighter on mobile */
-@media (max-width: 768px) {
-  .switcher-row { gap: 2px !important; }
-}
-
-/* Pulse bar — full width on mobile */
-@media (max-width: 768px) {
-  .pulse-container { width: 98vw !important; }
-}
-
-/* Bottom CTA — tighter on mobile */
-@media (max-width: 768px) {
-  .bottom-cta { bottom: 185px !important; gap: 4px !important; }
-  .drop-btn { padding: 10px 18px !important; font-size: 12px !important; }
-}
-
-/* Sport tab name — hide on very small screens */
-@media (max-width: 480px) {
-  .sport-name { display: none; }
-}
-
-/* Moment pulse — smaller on mobile */
-@media (max-width: 768px) {
-  .moment-btn { width: 52px !important; height: 52px !important; bottom: 190px !important; right: 12px !important; }
-}
-
-/* ── Mobile layout fixes ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-  /* Fan split — push below the 3-row switcher */
-  :root { --split-top: 126px; }
-
-  /* Countdown badge — right side, below split */
-  :root { --badge-top: 126px; }
-
-  /* Moment pulse — smaller, tucked right */
-  .moment-btn {
-    width: 46px !important;
-    height: 46px !important;
-  }
-
-  /* Hide passport link text on mobile */
-  .passport-link span { display: none; }
-
-  /* Pulse bar vibes — 2x2 grid on mobile */
-  .vibe-grid {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 6px !important;
-    width: 96vw !important;
-  }
-
-  /* Bottom CTA moves up a bit more */
-  .bottom-cta { bottom: 200px !important; }
-}
-
-@media (max-width: 480px) {
-  /* Even tighter on small phones */
-  :root { --split-top: 132px; --badge-top: 132px; }
-  .fan-counter { font-size: 36px !important; letter-spacing: -1px !important; }
-}
-
-/* Mobile only — show on mobile, hide on desktop */
-.mobile-only { display: none; }
-@media (max-width: 768px) {
-  .mobile-only { display: flex !important; }
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px !important; }
 }
