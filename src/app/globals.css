@@ -3,25 +3,18 @@
 @tailwind utilities;
 
 :root {
+  --header-bg:  #051D1A;
   --bg-primary:   #04050a;
   --bg-secondary: #0a0b12;
-  --bg-tertiary:  rgba(255,255,255,0.04);
-  --bg-panel:     rgba(255,255,255,0.03);
+  --bg-panel:     rgba(255,255,255,0.04);
 
   --text-primary: #ffffff;
-  --text-body:    rgba(255,255,255,0.88);
-  --text-muted:   rgba(255,255,255,0.68);
-  --text-subtle:  rgba(255,255,255,0.55);
-  --text-label:   rgba(255,255,255,0.65);
+  --text-body:    rgba(255,255,255,0.9);
+  --text-muted:   rgba(255,255,255,0.72);
+  --text-subtle:  rgba(255,255,255,0.58);
 
-  --border-soft:   rgba(255,255,255,0.08);
-  --border-medium: rgba(255,255,255,0.14);
-  --border-strong: rgba(255,255,255,0.22);
-
-  --accent-green:  #39FF76;
-  --accent-cyan:   #00B4FF;
-  --accent-red:    #DC2626;
-  --accent-orange: #EA580C;
+  --accent-green: #39FF76;
+  --accent-cyan:  #00B4FF;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -37,25 +30,45 @@ html, body {
 
 body { min-height: 100vh; min-height: 100svh; }
 
-/* Global readability upgrade — any residual low-contrast text gets bumped
-   This catches inline styles in every component without touching each file */
-[style*="rgba(255,255,255,0.25)"],
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL CONTRAST REPAIR — catches inline styles across the whole app
+   Every rgba(255,255,255, X) below 0.6 gets bumped to readable levels.
+   ═══════════════════════════════════════════════════════════ */
+
+[style*="rgba(255,255,255,0.2)"],
+[style*="rgba(255,255,255,0.22)"],
+[style*="rgba(255,255,255,0.25)"] {
+  color: rgba(255,255,255,0.58) !important;
+}
 [style*="rgba(255,255,255,0.3)"],
 [style*="rgba(255,255,255,0.35)"] {
-  color: rgba(255,255,255,0.6) !important;
+  color: rgba(255,255,255,0.68) !important;
 }
 [style*="rgba(255,255,255,0.4)"],
 [style*="rgba(255,255,255,0.45)"] {
-  color: rgba(255,255,255,0.72) !important;
+  color: rgba(255,255,255,0.78) !important;
 }
 [style*="rgba(255,255,255,0.5)"],
 [style*="rgba(255,255,255,0.55)"] {
-  color: rgba(255,255,255,0.78) !important;
+  color: rgba(255,255,255,0.82) !important;
 }
 
-/* Labels with letter-spacing+uppercase mono get a higher floor */
-[style*="letterSpacing"][style*="uppercase"] {
-  color: rgba(255,255,255,0.72) !important;
+/* Uppercase labels with letter-spacing (the tiny mono captions) are the worst
+   offender — give them even higher priority */
+[style*="letterSpacing"][style*="uppercase"],
+[style*="letter-spacing"][style*="text-transform"] {
+  color: rgba(255,255,255,0.78) !important;
+  font-weight: 700 !important;
+}
+
+/* But don't override text on colored backgrounds (vibe buttons, FAS labels) —
+   those already have their own color set and should be left alone */
+[style*="color: #"],
+[style*="color:#"],
+[style*="color: rgb("],
+[style*="color:rgb("] {
+  /* intentionally empty — presence of these selectors does not match
+     elements that use rgba() for color; this just documents intent */
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -79,7 +92,7 @@ input, textarea {
 }
 
 input::placeholder, textarea::placeholder {
-  color: rgba(255,255,255,0.48) !important;
+  color: rgba(255,255,255,0.5) !important;
 }
 
 @keyframes fadeUp {
