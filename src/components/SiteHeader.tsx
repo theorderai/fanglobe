@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { href: '/globe',      label: 'Globe',       icon: '🌍' },
+  { href: '/globe',       label: 'Globe',       icon: '🌍' },
+  { href: '/moments',     label: 'Moments',     icon: '✨' },
+  { href: '/oracle',      label: 'Oracle',      icon: '🔮' },
   { href: '/leaderboard', label: 'Leaderboard', icon: '🏆' },
   { href: '/fas/weekly',  label: 'FAS Weekly',  icon: '⚡' },
   { href: '/passport',    label: 'Passport',    icon: '🎫' },

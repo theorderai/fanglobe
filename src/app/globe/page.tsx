@@ -15,6 +15,9 @@ import CityPopup from '@/components/CityPopup'
 import MatchBrowser from '@/components/MatchBrowser'
 import { getExpectedReach, GLOBAL_FANS_TRACKED } from '@/lib/events'
 import EmailCaptureModal from '@/components/EmailCaptureModal'
+import LiveMatchPulse from '@/components/LiveMatchPulse'
+import SquadPanel from '@/components/SquadPanel'
+import StreakDisplay from '@/components/StreakDisplay'
 import type { CityData, FanGlobeEvent } from '@/types'
 
 const GlobeComponent = nextDynamic(() => import('@/components/GlobeComponent'), {
@@ -252,6 +255,7 @@ export default function GlobePage() {
   const [snapshots, setSnapshots] = useState<Record<string,{totalCount:number;pulse:{fire:number;ecstatic:number;nervous:number;crushed:number;moment:number}}>>({})
   const [matchBrowserSport, setMatchBrowserSport] = useState<string|null>(null)
   const [showEmailModal, setShowEmailModal] = useState(false)
+  const [showSquad, setShowSquad] = useState(false)
   const [userCityRank, setUserCityRank] = useState<number>(0)
   const [userCityData, setUserCityData] = useState<{city:string;country:string;flag:string}|null>(null)
   const [captchaToken, setCaptchaToken] = useState<string|null>(null)
@@ -402,6 +406,9 @@ export default function GlobePage() {
                     <a href="/fas" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>📊 What is FAS?</a>
                     <a href="/passport" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🎫 Passport</a>
                     <a href="/india-pakistan" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🏏 India vs Pakistan</a>
+                    <a href="/moments" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>✨ Clutch Moments</a>
+                    <a href="/oracle" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🔮 Oracle</a>
+                    <button onClick={() => setShowSquad(true)} style={{ display:'block',width:'100%',padding:'8px 12px',borderRadius:8,color:'#fff',background:'transparent',border:'none',textAlign:'left',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif",cursor:'pointer' }}>👥 Squad watch</button>
                   </div>
                 </details>
                 <ActiveMatchPill event={activeEvent} accent={accent} />
@@ -447,6 +454,9 @@ export default function GlobePage() {
                   <a href="/leaderboard" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🏆 Leaderboard</a>
                   <a href="/fas/weekly" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>⚡ FAS Weekly</a>
                   <a href="/passport" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🎫 Passport</a>
+                  <a href="/moments" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>✨ Moments</a>
+                  <a href="/oracle" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🔮 Oracle</a>
+                  <button onClick={() => setShowSquad(true)} style={{ background:'rgba(255,107,53,0.1)',border:'1px solid rgba(255,107,53,0.3)',borderRadius:100,padding:'3px 9px',cursor:'pointer',fontSize:9,fontWeight:700,color:'#ff6b35',fontFamily:"'JetBrains Mono',monospace",whiteSpace:'nowrap' }}>👥 SQUAD</button>
                 </div>
               </div>
               {/* Sport tabs — centered */}
@@ -501,6 +511,11 @@ export default function GlobePage() {
         {/* Vibe meter */}
         <VibeMeter pulse={pulse} userVibe={userVibe} accent={accent} onVote={castVibe} />
 
+        {/* NEW: Live Match Pulse — 60-second heartbeat chart */}
+        {activeEvent && effectiveId && (
+          <LiveMatchPulse matchId={effectiveId} accent={accent} />
+        )}
+
         {/* Pulse bar + match schedule */}
         <div style={{ display:'flex',alignItems:'center',gap:8,marginTop:6 }}>
           <span style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.22)',letterSpacing:'2px',fontFamily:"'JetBrains Mono',monospace",flexShrink:0 }}>PULSE</span>
@@ -528,6 +543,19 @@ export default function GlobePage() {
       {showPickSide && activeEvent && <PickYourSide event={activeEvent} onPick={side=>{ if(pendingPin) commitCheckin(pendingPin.lat,pendingPin.lng,side) }} />}
       {showShareCard && snapshot && <ShareCard event={activeEvent} snapshot={snapshot} userCity={undefined} userRank={undefined} onClose={()=>setShowShareCard(false)} />}
       {selectedCity && <CityPopup city={selectedCity} event={activeEvent} cheers={cheers} rank={cities.findIndex(c=>c.city===selectedCity.city)+1} accentColor={accent} onClose={()=>setSelectedCity(null)} />}
+      {showSquad && activeEvent && (
+        <SquadPanel
+          matchId={effectiveId}
+          sessionId={auth.user?.id ?? 'anon'}
+          accent={accent}
+          userCity={userCityData?.city}
+          userFlag={userCityData?.flag}
+          userLat={userPin?.lat}
+          userLng={userPin?.lng}
+          userTeamSide={undefined}
+          onClose={() => setShowSquad(false)}
+        />
+      )}
     </div>
   )
 }
