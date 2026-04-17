@@ -15,6 +15,7 @@ import CityPopup from '@/components/CityPopup'
 import MatchBrowser from '@/components/MatchBrowser'
 import { getExpectedReach, GLOBAL_FANS_TRACKED } from '@/lib/events'
 import EmailCaptureModal from '@/components/EmailCaptureModal'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 import type { CityData, FanGlobeEvent } from '@/types'
 
 const GlobeComponent = nextDynamic(() => import('@/components/GlobeComponent'), {
@@ -251,6 +252,7 @@ export default function GlobePage() {
   const [selectedCity, setSelectedCity] = useState<CityData|null>(null)
   const [snapshots, setSnapshots] = useState<Record<string,{totalCount:number;pulse:{fire:number;ecstatic:number;nervous:number;crushed:number;moment:number}}>>({})
   const [matchBrowserSport, setMatchBrowserSport] = useState<string|null>(null)
+  const push = usePushNotifications(auth.user?.id ?? 'anon', undefined)
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [userCityRank, setUserCityRank] = useState<number>(0)
   const [userCityData, setUserCityData] = useState<{city:string;country:string;flag:string}|null>(null)
@@ -393,7 +395,25 @@ export default function GlobePage() {
                 <span style={{ fontSize:13,fontWeight:800,color:'#fff',fontFamily:"'Syne',sans-serif" }}>fanglobe<span style={{ color:accent }}>.live</span></span>
               </div>
               <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+                <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+                {push.state !== 'unsupported' && push.state !== 'granted' && (
+                  <button onClick={push.subscribe} disabled={push.loading} title="Get match notifications" style={{ background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'50%',width:28,height:28,cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:push.loading?0.5:1 }}>🔔</button>
+                )}
+                <details style={{ position:'relative',flexShrink:0 }}>
+                  <summary style={{ listStyle:'none',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'50%',width:28,height:28,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center' }}>⋯</summary>
+                  <div style={{ position:'absolute',top:34,right:0,zIndex:40,background:'rgba(4,5,10,0.96)',backdropFilter:'blur(20px)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:6,minWidth:170,boxShadow:'0 20px 50px rgba(0,0,0,0.7)' }}>
+                    <a href="/leaderboard" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🏆 Leaderboard</a>
+                    <a href="/fas/weekly" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>⚡ FAS Weekly</a>
+                    <a href="/fas" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>📊 What is FAS?</a>
+                    <a href="/passport" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🎫 Passport</a>
+                    <a href="/india-pakistan" style={{ display:'block',padding:'8px 12px',borderRadius:8,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600,fontFamily:"'Syne',sans-serif" }}>🏏 India vs Pakistan</a>
+                  </div>
+                </details>
+                {push.state === 'granted' && (
+                  <div style={{ width:6,height:6,borderRadius:'50%',background:accent,boxShadow:`0 0 6px ${accent}` }} title="Notifications on" />
+                )}
                 <ActiveMatchPill event={activeEvent} accent={accent} />
+                </div>
               </div>
             </div>
             <div style={{ padding:'0 12px 6px' }}>
@@ -431,7 +451,11 @@ export default function GlobePage() {
               <div style={{ display:'flex',alignItems:'center',gap:6,flexShrink:0 }}>
                 <div style={{ width:26,height:26,borderRadius:7,background:accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,boxShadow:`0 0 12px ${accent}44`,transition:'background 0.4s' }}>{sportCfg?.emoji??'🌍'}</div>
                 <span style={{ fontSize:13,fontWeight:800,color:'#fff',fontFamily:"'Syne',sans-serif" }}>fanglobe<span style={{ color:accent }}>.live</span></span>
-                <a href="/passport" style={{ fontSize:9,color:'rgba(255,255,255,0.3)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'2px 8px',marginLeft:4 }}>🎫 Passport</a>
+                <div style={{ display:'flex',alignItems:'center',gap:4,marginLeft:6 }}>
+                  <a href="/leaderboard" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🏆 Leaderboard</a>
+                  <a href="/fas/weekly" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>⚡ FAS Weekly</a>
+                  <a href="/passport" style={{ fontSize:9,color:'rgba(255,255,255,0.4)',textDecoration:'none',fontFamily:"'JetBrains Mono',monospace",border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'3px 9px',whiteSpace:'nowrap' }}>🎫 Passport</a>
+                </div>
               </div>
               {/* Sport tabs — centered */}
               <div style={{ flex:1,display:'flex',justifyContent:'center' }}>
