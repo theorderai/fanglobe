@@ -1,35 +1,47 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export async function generateCheers(params: {
-  matchContext: string; city: string; flag: string; vibe: string; count?: number
-}): Promise<string[]> {
-  const { matchContext, city, flag, vibe, count = 3 } = params
-  const vibeLabel = { fire:'pumped/hyped', ecstatic:'ecstatic/euphoric', nervous:'nervous/anxious', crushed:'devastated', moment:'reacting to a key moment' }[vibe] ?? vibe
+// Haiku tier, as in the original app: moderation is high-volume and simple.
+const MODERATION_MODEL = 'claude-haiku-5-5'
 
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001', max_tokens: 400,
-    messages: [{ role:'user', content: `Generate ${count} short authentic fan cheers for: ${matchContext}
-Fan location: ${flag} ${city} · Mood: ${vibeLabel}
-Rules: Under 80 chars, casual/raw, no hashtags, some local language ok.
-Return ONLY a JSON array of strings.` }],
-  })
-  const text = response.content[0].type === 'text' ? response.content[0].text : '[]'
+export interface ModerationResult { approved: boolean; reason: string | null }
+
+/**
+ * Moderate a fan "vent" about a refereeing decision.
+ * Anger at decisions is the point of the product; abuse of people is not.
+ */
+export async function moderateVent(text: string): Promise<ModerationResult> {
+  if (!process.env.ANTHROPIC_API_KEY) return { approved: false, reason: 'moderation unavailable' }
+
   try {
-    const parsed = JSON.parse(text.replace(/```json?|```/g, '').trim())
-    return Array.isArray(parsed) ? parsed.slice(0, count) : []
-  } catch { return [] }
-}
+    const response = await client.messages.create({
+      model: MODERATION_MODEL,
+      max_tokens: 2000,
+      system: `You moderate short fan comments on a live sports app where fans react to referee decisions.
 
-export async function moderateCheer(text: string): Promise<{ approved: boolean; reason?: string; cleaned?: string }> {
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001', max_tokens: 200,
-    messages: [{ role:'user', content: `Moderate this fan cheer for a sports app (safe for all ages, non-offensive):
-"${text}"
-Return ONLY JSON: {"approved":bool,"reason":string|null,"cleaned":string|null}` }],
-  })
-  const content = response.content[0].type === 'text' ? response.content[0].text : '{}'
-  try { return JSON.parse(content.replace(/```json?|```/g, '').trim()) }
-  catch { return { approved: false, reason: 'parse error' } }
+APPROVE: frustration, sarcasm, strong opinions about a DECISION ("that was never a penalty", "VAR is a joke", "worst call of the season"), mild swearing.
+
+REJECT:
+- abuse, threats or slurs aimed at any person, including referees, players and other fans
+- naming a referee together with an insult, accusation of corruption/cheating, or personal attack
+- hate speech, sexual content, doxxing, spam, links, or anything unrelated to the match
+
+Reply with JSON only, no prose: {"approved": true|false, "reason": "<short reason or null>"}`,
+      messages: [{ role: 'user', content: text }],
+    })
+
+    const block = response.content.find(b => b.type === 'text')
+    const raw = block && block.type === 'text' ? block.text : ''
+    const json = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)
+    const parsed = JSON.parse(json) as { approved?: unknown; reason?: unknown }
+    return {
+      approved: parsed.approved === true,
+      reason: typeof parsed.reason === 'string' ? parsed.reason : null,
+    }
+  } catch (err) {
+    console.error('moderateVent failed:', err)
+    // Fail closed: an unmoderated vent never goes public.
+    return { approved: false, reason: 'moderation error' }
+  }
 }

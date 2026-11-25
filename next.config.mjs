@@ -1,21 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['globe.gl', 'three'],
-  },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals = [...(config.externals || []), 'globe.gl', 'three']
-    }
-    return config
-  },
   headers: async () => [
     {
-      source: '/api/:path*',
+      // Public read API (match feed) can be polled cross-origin by broadcasters.
+      source: '/api/match/:path*',
       headers: [
         { key: 'Access-Control-Allow-Origin', value: '*' },
-        { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
+        { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS' },
       ],
+    },
+    {
+      // Broadcast overlay must be embeddable.
+      source: '/widget/:path*',
+      headers: [{ key: 'Content-Security-Policy', value: 'frame-ancestors *' }],
     },
   ],
 }

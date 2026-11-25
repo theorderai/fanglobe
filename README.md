@@ -1,151 +1,69 @@
-# kickoff.world ⚽🌍
+# FanGlobe — the fans’ VAR
 
-**Where Are You Watching?** — The live global fan heatmap for FIFA World Cup 2026.
+Live, incident-anchored fan verdicts on refereeing decisions.
 
-WebGL globe · Real-time checkins · Match pulse voting · AI-powered cheers
+When a big call lands (penalty, red card, VAR review), fans rule on it in one or two taps:
+**right call / wrong call** plus **how angry** (1–5). Results split by **home fans, away fans and
+neutrals**, so the headline is the one that cuts through tribalism:
 
----
+> *Even 41% of Chelsea fans say the ref got it wrong.*
+
+## How it works
+
+| Piece | Where |
+|---|---|
+| Pick a side (home / away / neutral), locked per match | `POST /api/side` |
+| Rule on a decision (one vote per fan, final) | `POST /api/verdict` |
+| “Bad call!” taps → 10-second timeseries → spike detection opens a crowd flashpoint | `POST /api/react`, `src/lib/spike.ts` |
+| Short vents, moderated by Claude Haiku (decisions yes, abuse of people no) | `POST /api/vent`, `src/lib/claude.ts` |
+| Everything a page or broadcaster needs, CDN-cached for 2s | `GET /api/match/:id` |
+| Controversy index + headline logic | `src/lib/verdict.ts` |
+| Share pages + 1200×630 verdict cards | `/i/:shortId`, `/api/og/incident/:shortId` |
+| Broadcast overlay (OBS / vMix / iframe) | `/widget/:matchId` (`?bg=transparent` for keying) |
+| Ref Desk: add matches, open/close decisions by hand | `/admin` (needs `ADMIN_SECRET`) |
+| Optional live feed (API-Football): fixtures, score, auto-incidents for reds/pens/VAR | `src/lib/feed.ts`, `GET /api/cron` |
+
+### Controversy index (0–100)
+
+`60% dissent + 25% anger + 15% volume`, where dissent is the share saying “wrong” among
+**neutrals** when there are at least 10 of them, otherwise among everyone. Labels:
+Fair call < 35 ≤ Debatable < 55 ≤ Controversial < 75 ≤ Robbery. Under 25 votes it shows
+“Too early”.
+
+### Data honesty
+
+Every number shown is a real vote. There is no seeded data and no generated fan content.
+That is the product’s credibility with broadcasters; keep it that way.
 
 ## Stack
 
-| Layer | Service | Why |
-|---|---|---|
-| Frontend | Next.js 14 + React | App Router, edge rendering |
-| Styling | Inline styles + CSS vars | Zero-dependency, globe-native |
-| Globe | globe.gl (Three.js) | WebGL, arcs, atmosphere |
-| Database | Supabase (Postgres) | Persistence + Realtime WS |
-| Cache / counters | Upstash Redis | Atomic counters, write buffer |
-| AI cheers | Claude Haiku | Generation + moderation |
-| Deployment | Vercel | Edge network, cron jobs |
-| CI/CD | GitHub Actions | Type check → deploy |
+Next.js 14 (App Router) · Supabase (Postgres + anonymous auth) · Upstash Redis (live counters,
+timeseries, rate limits) · Claude Haiku (moderation) · Vercel (hosting + per-minute cron).
 
----
-
-## Local setup
+## Setup
 
 ```bash
-git clone https://github.com/your-org/kickoff-world
-cd kickoff-world
 npm install
-cp .env.example .env.local
-# Fill in all env vars (see below)
+cp .env.example .env.local   # fill in the values
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+### Database
 
----
+Run `supabase/migrations/010_fan_verdict.sql` in the Supabase SQL editor (or `supabase db push`).
+It only adds new tables (`matches`, `incidents`, `match_sides`, `verdict_votes`, `vents`,
+`reaction_buckets`); World Cup-era tables are left untouched.
 
-## Environment variables
+Anonymous sign-ins must be enabled in Supabase Auth (they already are for the live site).
 
-```bash
-# Supabase — create project at supabase.com
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+### Matchday without a feed
 
-# Upstash Redis — create DB at upstash.com (free tier fine for dev)
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
+1. Open `/admin`, enter `ADMIN_SECRET`.
+2. Add the match, set it to **live** at kickoff.
+3. When a big call happens, fill in *what happened* and *the ref’s call*, then **Open verdict**.
+   Fans who hit “Bad call!” can also open a crowd flashpoint on their own.
 
-# Anthropic — get key at console.anthropic.com
-ANTHROPIC_API_KEY=
+### Matchday with API-Football
 
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-CRON_SECRET=any-random-string-for-local
-```
-
----
-
-## Database setup
-
-Run migrations in Supabase SQL Editor:
-
-```bash
-# Option 1: Supabase CLI
-supabase db push
-
-# Option 2: Paste into SQL Editor
-cat supabase/migrations/001_schema.sql
-```
-
----
-
-## Architecture at scale
-
-```
-Browser
-  └─ /api/checkin (Edge fn)
-       ├─ Redis INCR [atomic, <1ms]        ← live counter source of truth
-       └─ Supabase INSERT [async, non-blocking] ← persistence + analytics
-
-Browser
-  └─ /api/snapshot/:matchId (Edge fn, cached 3s)
-       ├─ Redis GET snapshot [pre-built by cron]
-       └─ fallback: Redis HGETALL + build live
-
-Cron (every 60s, Vercel)
-  └─ /api/cron
-       ├─ Build snapshot from Redis → cache in Redis (90s TTL)
-       ├─ Persist snapshot to Supabase (analytics)
-       └─ Generate 2-4 AI cheers per match via Claude Haiku
-
-Supabase Realtime
-  └─ cheers table INSERT → broadcast to all clients (new cheer appears in feed)
-```
-
-### Scale thresholds
-
-| Users (concurrent) | Action needed |
-|---|---|
-| 0–500 | Supabase free + Upstash free |
-| 500–5K | Supabase Pro ($25/mo) |
-| 5K–50K | Upstash Pay-as-you-go |
-| 50K–1M | Swap Supabase Realtime → Ably/Pusher |
-| 1M+ | Redis cluster + PgBouncer + Cloudflare |
-
----
-
-## Deployment
-
-### Vercel
-
-```bash
-npm i -g vercel
-vercel login
-vercel link
-vercel env pull .env.local  # after adding vars in dashboard
-vercel deploy --prod
-```
-
-Add all env vars in Vercel dashboard → Settings → Environment Variables.
-
-### GitHub Actions secrets needed
-
-```
-VERCEL_TOKEN      — from vercel.com/account/tokens
-VERCEL_ORG_ID     — from .vercel/project.json after `vercel link`
-VERCEL_PROJECT_ID — from .vercel/project.json
-```
-
-### Cron auth
-
-Vercel calls `/api/cron` with `Authorization: Bearer {CRON_SECRET}`. Set `CRON_SECRET` to any long random string in Vercel env vars.
-
----
-
-## Domain
-
-Buy `kickoff.world` → point nameservers to Vercel → add custom domain in Vercel dashboard.
-
----
-
-## Roadmap
-
-- [ ] SquadCard — AI player card generator
-- [ ] Match snapshot share card (html2canvas)
-- [ ] Mobile PWA (installable, push notifications at kickoff)
-- [ ] Watch party venue pins (monetization layer)
-- [ ] City rivalry badges
-- [ ] Post-match "Emotional Journey" infographic
+Set `API_FOOTBALL_KEY`, `FEED_LEAGUES` and `FEED_SEASON`. The cron syncs fixtures hourly and
+polls live matches every minute (about 1,500 requests a day, so a paid plan).

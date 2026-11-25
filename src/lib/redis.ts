@@ -1,79 +1,140 @@
 import { Redis } from '@upstash/redis'
-import type { Pulse, CityData } from '@/types'
+import type { Side, Tally, Verdict } from '@/types'
+import { emptyTally } from './verdict'
 
 export const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 })
 
+/** Width of one tap bucket in the live timeseries. */
+export const BUCKET_SEC = 10
+const TAP_TTL_SEC = 6 * 3600
+const VOTE_TTL_SEC = 60 * 24 * 3600
+
 export const keys = {
-  total:      (eid: string) => `fg:event:${eid}:total`,
-  homeTotal:  (eid: string) => `fg:event:${eid}:home`,
-  awayTotal:  (eid: string) => `fg:event:${eid}:away`,
-  city:       (eid: string) => `fg:event:${eid}:cities`,
-  pulse:      (eid: string) => `fg:event:${eid}:pulse`,
-  snap:       (eid: string) => `fg:event:${eid}:snapshot`,
-  rate:       (id: string, ep: string) => `fg:rate:${ep}:${id}`,
-  sportTotal: (sid: string) => `fg:sport:${sid}:total`,
-  moment:     (mid: string) => `fg:moment:${mid}:reactions`,
+  tally:     (incidentId: string) => `fv:inc:${incidentId}:tally`,
+  voters:    (incidentId: string) => `fv:inc:${incidentId}:voters`,
+  sides:     (matchId: string) => `fv:m:${matchId}:sides`,
+  tap:       (matchId: string, bucket: number) => `fv:m:${matchId}:t:${bucket}`,
+  tapCool:   (matchId: string, userId: string) => `fv:m:${matchId}:tapcool:${userId}`,
+  spikeLock: (matchId: string) => `fv:m:${matchId}:spikelock`,
+  rate:      (id: string, ep: string) => `fv:rate:${ep}:${id}`,
+  cronLock:  (name: string) => `fv:cron:${name}`,
 }
 
-export async function incrCheckin(eid: string, city?: string, teamSide?: 'home'|'away', sportId?: string): Promise<number> {
-  const p = redis.pipeline()
-  p.incr(keys.total(eid))
-  if (city) p.hincrby(keys.city(eid), city, 1)
-  if (teamSide === 'home') p.incr(keys.homeTotal(eid))
-  if (teamSide === 'away') p.incr(keys.awayTotal(eid))
-  if (sportId) p.incr(keys.sportTotal(sportId))
-  const r = await p.exec<number[]>()
-  return r[0]
+export function bucketOf(ms = Date.now()): number {
+  return Math.floor(ms / 1000 / BUCKET_SEC)
 }
 
-export async function castPulseVote(eid: string, vibe: string, prev?: string): Promise<void> {
+// ── Sides ──────────────────────────────────────────────────────────────────
+
+export async function setSide(matchId: string, userId: string, side: Side) {
+  await redis.hset(keys.sides(matchId), { [userId]: side })
+}
+
+export async function getSide(matchId: string, userId: string): Promise<Side | null> {
+  const v = await redis.hget<string>(keys.sides(matchId), userId)
+  return v === 'home' || v === 'away' || v === 'neutral' ? v : null
+}
+
+// ── Votes ──────────────────────────────────────────────────────────────────
+
+/**
+ * Record a vote. Returns false if this user already voted on the incident.
+ * The voters set makes the vote count exactly-once even under retries.
+ */
+export async function recordVote(
+  incidentId: string, userId: string, side: Side, verdict: Verdict, anger: number,
+): Promise<boolean> {
+  const added = await redis.sadd(keys.voters(incidentId), userId)
+  if (added === 0) return false
   const p = redis.pipeline()
-  if (prev) p.hincrby(keys.pulse(eid), prev, -1)
-  p.hincrby(keys.pulse(eid), vibe, 1)
+  p.hincrby(keys.tally(incidentId), `${side}:${verdict}`, 1)
+  p.hincrby(keys.tally(incidentId), `${side}:anger`, anger)
+  p.expire(keys.tally(incidentId), VOTE_TTL_SEC)
+  p.expire(keys.voters(incidentId), VOTE_TTL_SEC)
+  await p.exec()
+  return true
+}
+
+function parseTally(raw: Record<string, unknown> | null): Tally {
+  const t = emptyTally()
+  if (!raw) return t
+  for (const side of ['home', 'away', 'neutral'] as const) {
+    t[side].right = Number(raw[`${side}:right`] ?? 0)
+    t[side].wrong = Number(raw[`${side}:wrong`] ?? 0)
+    t[side].angerSum = Number(raw[`${side}:anger`] ?? 0)
+  }
+  return t
+}
+
+export async function getTallies(incidentIds: string[]): Promise<Map<string, Tally | null>> {
+  const out = new Map<string, Tally | null>()
+  if (!incidentIds.length) return out
+  const p = redis.pipeline()
+  for (const id of incidentIds) p.hgetall(keys.tally(id))
+  const rows = await p.exec<(Record<string, unknown> | null)[]>()
+  incidentIds.forEach((id, i) => out.set(id, rows[i] ? parseTally(rows[i]) : null))
+  return out
+}
+
+/** Write a tally rebuilt from Postgres back into Redis (cold-cache path). */
+export async function primeTally(incidentId: string, tally: Tally) {
+  const fields: Record<string, number> = {}
+  for (const side of ['home', 'away', 'neutral'] as const) {
+    fields[`${side}:right`] = tally[side].right
+    fields[`${side}:wrong`] = tally[side].wrong
+    fields[`${side}:anger`] = tally[side].angerSum
+  }
+  const p = redis.pipeline()
+  p.hset(keys.tally(incidentId), fields)
+  p.expire(keys.tally(incidentId), VOTE_TTL_SEC)
   await p.exec()
 }
 
-export async function getEventSnapshot(eid: string) {
-  const [total, homeTotal, awayTotal, cities, pulse] = await Promise.all([
-    redis.get<number>(keys.total(eid)),
-    redis.get<number>(keys.homeTotal(eid)),
-    redis.get<number>(keys.awayTotal(eid)),
-    redis.hgetall<Record<string,number>>(keys.city(eid)),
-    redis.hgetall<Record<string,number>>(keys.pulse(eid)),
-  ])
-  return {
-    total: total ?? 0, homeTotal: homeTotal ?? 0, awayTotal: awayTotal ?? 0,
-    cities: cities ?? {},
-    pulse: { fire: Number(pulse?.fire??0), ecstatic: Number(pulse?.ecstatic??0), nervous: Number(pulse?.nervous??0), crushed: Number(pulse?.crushed??0), moment: Number(pulse?.moment??0) } satisfies Pulse,
-  }
+// ── Tap timeseries ─────────────────────────────────────────────────────────
+
+/** Count a "bad call!" tap. Returns false if the user is still on cooldown. */
+export async function recordTap(matchId: string, userId: string, cooldownSec = 5): Promise<boolean> {
+  const ok = await redis.set(keys.tapCool(matchId, userId), 1, { nx: true, ex: cooldownSec })
+  if (ok !== 'OK') return false
+  const key = keys.tap(matchId, bucketOf())
+  const p = redis.pipeline()
+  p.incr(key)
+  p.expire(key, TAP_TTL_SEC)
+  await p.exec()
+  return true
 }
 
-export async function getCachedSnapshot(eid: string): Promise<string|null> { return redis.get<string>(keys.snap(eid)) }
-export async function setCachedSnapshot(eid: string, data: string): Promise<void> {
-  await redis.setex(keys.snap(eid), 300, data)
+/** The last `n` buckets for a match, oldest → newest (current bucket last). */
+export async function getTapSeries(matchId: string, n: number): Promise<{ startBucket: number; counts: number[] }> {
+  const end = bucketOf()
+  const startBucket = end - n + 1
+  const ks = Array.from({ length: n }, (_, i) => keys.tap(matchId, startBucket + i))
+  const vals = await redis.mget<(number | string | null)[]>(...ks)
+  return { startBucket, counts: vals.map(v => Number(v ?? 0)) }
 }
+
+/** Only one incident per match may auto-open inside this window. */
+export async function acquireSpikeLock(matchId: string, windowSec = 90): Promise<boolean> {
+  const ok = await redis.set(keys.spikeLock(matchId), 1, { nx: true, ex: windowSec })
+  return ok === 'OK'
+}
+
+// ── Misc ───────────────────────────────────────────────────────────────────
 
 export async function checkRateLimit(id: string, ep: string, limit: number, windowSecs: number): Promise<boolean> {
   const key = keys.rate(id, ep)
   const p = redis.pipeline()
-  p.incr(key); p.expire(key, windowSecs)
-  const r = await p.exec<[number,number]>()
+  p.incr(key)
+  p.expire(key, windowSecs)
+  const r = await p.exec<[number, number]>()
   return r[0] <= limit
 }
 
-export async function seedEventData(eid: string, cities: CityData[], sportId: string): Promise<void> {
-  const existing = await redis.get(keys.total(eid))
-  if (existing !== null) return
-  const p = redis.pipeline()
-  let total = 0
-  for (const c of cities) { p.hset(keys.city(eid), { [c.city]: c.count }); total += c.count }
-  p.set(keys.total(eid), total)
-  p.set(keys.sportTotal(sportId), total)
-  p.hset(keys.pulse(eid), { fire: Math.floor(total*0.35), ecstatic: Math.floor(total*0.28), nervous: Math.floor(total*0.24), crushed: Math.floor(total*0.10), moment: Math.floor(total*0.03) })
-  await p.exec()
+/** Returns true if the caller got the lock (i.e. the job should run now). */
+export async function cronGate(name: string, everySec: number): Promise<boolean> {
+  const ok = await redis.set(keys.cronLock(name), 1, { nx: true, ex: everySec })
+  return ok === 'OK'
 }
-
-export async function incrMomentReaction(mid: string): Promise<number> { return redis.incr(keys.moment(mid)) }
