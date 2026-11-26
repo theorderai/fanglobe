@@ -89,7 +89,8 @@ export default function MatchLive({ initial }: { initial: MatchFeed }) {
     <>
       <div className="scoreboard">
         <div className="team home">{match.homeTeam}</div>
-        <div className="score">{scoreOrTime(match)}</div>
+        {/* Kickoff time is formatted in the server's timezone, then the viewer's. */}
+        <div className="score" suppressHydrationWarning>{scoreOrTime(match)}</div>
         <div className="team">{match.awayTeam}</div>
       </div>
       <div className="row" style={{ justifyContent: 'center', marginBottom: 20 }}>
