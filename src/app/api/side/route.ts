@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
     .from('match_sides')
     .upsert({ match_id: matchId, user_id: user.id, side: side as Side }, { onConflict: 'match_id,user_id' })
   if (dbError) {
+    // 23503 = foreign key violation: the match doesn't exist
+    if (dbError.code === '23503') return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     console.error('side upsert failed:', dbError)
     return NextResponse.json({ error: 'Could not save side' }, { status: 500 })
   }
