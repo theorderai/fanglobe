@@ -6,13 +6,15 @@ import { INCIDENT_KINDS, type IncidentKind } from '@/types'
 
 export const runtime = 'nodejs'
 
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.ADMIN_SECRET
-  const given = req.headers.get('x-admin-secret') ?? ''
-  if (!secret || secret.length < 16) return false
+/** 'ok', or why the request was refused. Whitespace is trimmed on both sides,
+ *  since a pasted env var or typed secret often picks up a stray space/newline. */
+function checkAdmin(req: NextRequest): 'ok' | 'not_configured' | 'wrong_secret' {
+  const secret = (process.env.ADMIN_SECRET ?? '').trim()
+  const given = (req.headers.get('x-admin-secret') ?? '').trim()
+  if (secret.length < 16) return 'not_configured'
   const a = Buffer.from(secret)
   const b = Buffer.from(given)
-  return a.length === b.length && timingSafeEqual(a, b)
+  return a.length === b.length && timingSafeEqual(a, b) ? 'ok' : 'wrong_secret'
 }
 
 function str(v: unknown, max: number): string | null {
@@ -27,7 +29,13 @@ function str(v: unknown, max: number): string | null {
  *   set_incident     { id, status: 'open'|'closed'|'hidden', title?, refCall?, kind?, favouredSide? }
  */
 export async function POST(req: NextRequest) {
-  if (!authorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = checkAdmin(req)
+  if (auth === 'not_configured') {
+    return NextResponse.json({ error: 'ADMIN_SECRET is not set (or under 16 characters) for this deployment' }, { status: 503 })
+  }
+  if (auth === 'wrong_secret') {
+    return NextResponse.json({ error: 'Wrong admin secret' }, { status: 401 })
+  }
   const body = await req.json().catch(() => ({}))
   const supabase = createServiceClient()
 
